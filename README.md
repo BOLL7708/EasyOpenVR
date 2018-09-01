@@ -2,12 +2,17 @@
 This is a git submodule to make it easier to talk to the OpenVR API using the C# headers.
 
 ## Disclaimer
-I'm making this as to collect all the things I've figured out and used in a plethora of private OpenVR projects. I'm not a C# programmer by trade so I expect many of the things I've implemented to have better solutions, naturally, this is more of a "get something done at all" project. 
+This is a project where I have collected things I've figured out while trying to interface OpenVR through C#. I'm not a C# programmer by trade so this is closer to a "get something done at all"-project than something hyper optimized. 
 
-As this is a work-in-progress things might get renamed along the way, but I am implementing this in my own projects as hopefully I can keep that to a minimum. If nothing else, this can be a place to reference how to call certain OpenVR API functions from C#, they were not all obvious to me.
+As this is a work-in-progress things might get renamed along the way, hopefully I can keep that to a minimum as I do use this myself, in multiple projects. If nothing else this can act as a place to reference how to call certain OpenVR API functions from C#, some of them took me some time to figure out.
+
+## Installation
+1. To use this either download the repo/file directly or add it as a git submodule by running the following command in the root of your project, replace `TargetFolder` with your own value: `git submodule add https://github.com/BOLL7708/EasyOpenVR.git TargetFolder/EasyOpenVR`
+2. Download these dependencies from [OpenVR](https://github.com/ValveSoftware/openvr), the files are [openvr_api.cs](https://github.com/ValveSoftware/openvr/blob/master/headers/openvr_api.cs) and [openvr_api.dll](https://github.com/ValveSoftware/openvr/blob/master/bin/win64/openvr_api.dll), put them in the root of your project. 
+3. Include the files in your project and set the `.dll` to `Copy always` and build your project for 64bit.
 
 ## Usage
-To use this either download the repo directly or add it as a git submodule by running this in your project git root, replace TargetFolder with your own value:
-`git submodule add https://github.com/BOLL7708/EasyOpenVR.git TargetFolder/EasyOpenVR`
-
-About the only dependency are files from [OpenVR](https://github.com/ValveSoftware/openvr), download [openvr_api.cs](https://github.com/ValveSoftware/openvr/blob/master/headers/openvr_api.cs) and [openvr_api.dll](https://github.com/ValveSoftware/openvr/blob/master/bin/win64/openvr_api.dll) and put them in your project root. Set the .dll to _Copy always_ and build for 64bit.
+1. To use the singleton class, which is my current approach, simply include the namespace by adding `using BOLL7708;` and then grab an instance from `EasyOpenVRSingleton.Instance`
+2. If you want your application to be something else than `VRApplication_Background` you can set that with `instance.SetApplicationType()`
+3. With the instance run `instance.Init()` to connect to a running OpenVR session. It will return true if initialization was successful, otherwise run a timer and try to init as often as you see fit.
+4. At this point, if you have a connected session, you can explore the various calls you can do.

@@ -7,6 +7,10 @@ namespace BOLL7708
 {
     public sealed class EasyOpenVRSingleton
     {
+        /**
+         * This is a singleton because in my own experience connecting multiple 
+         * times to OpenVR from the same application is a terrible idea.
+         */
         private static EasyOpenVRSingleton __instance = null;
         private EasyOpenVRSingleton() { }
 
@@ -25,6 +29,9 @@ namespace BOLL7708
             _appType = appType;
         }
 
+        /**
+         * Will output debug information
+         */
         private bool _debug = false;
         public void SetDebug(bool debug)
         {
@@ -55,7 +62,9 @@ namespace BOLL7708
             OpenVR.Compositor.GetCumulativeStats(ref stats, (uint)System.Runtime.InteropServices.Marshal.SizeOf(stats));
             return stats;
         }
+        #endregion
 
+        #region tracking
         public TrackedDevicePose_t[] GetDeviceToAbsoluteTrackingPose(ETrackingUniverseOrigin origin = ETrackingUniverseOrigin.TrackingUniverseStanding)
         {
             TrackedDevicePose_t[] trackedDevicePoses = new TrackedDevicePose_t[OpenVR.k_unMaxTrackedDeviceCount];
@@ -80,6 +89,60 @@ namespace BOLL7708
             if (_debug && !success) Debug.WriteLine("Failure getting PlayAreaSize");
             return size;
         }
+
+        public void MoveUniverse(HmdVector3_t offset, bool moveChaperone = true, bool moveLiveZeroPose = true)
+        {
+            OpenVR.ChaperoneSetup.RevertWorkingCopy(); // Sets working copy to current live settings
+            if (moveLiveZeroPose) MoveLiveZeroPose(offset);
+            if (moveChaperone) MoveChaperoneBounds(Utils.InvertVector(offset));
+            OpenVR.ChaperoneSetup.CommitWorkingCopy(EChaperoneConfigFile.Live); // Apply changes to live settings
+        }
+
+        public void MoveChaperoneBounds(HmdVector3_t offset)
+        {
+            HmdQuad_t[] physQuad;
+            OpenVR.ChaperoneSetup.GetWorkingCollisionBoundsInfo(out physQuad);
+
+            for (int i = 0; i < physQuad.Length; i++)
+            {
+                MoveCorner(ref physQuad[i].vCorners0);
+                MoveCorner(ref physQuad[i].vCorners1);
+                MoveCorner(ref physQuad[i].vCorners2);
+                MoveCorner(ref physQuad[i].vCorners3);
+            }
+            OpenVR.ChaperoneSetup.SetWorkingCollisionBoundsInfo(physQuad);
+
+            void MoveCorner(ref HmdVector3_t corner)
+            {
+                // Will not change points at vertical 0, that's the bottom of the Chaperone.
+                // This at it appears the bottom gets reset to 0 at a regular interval anyway.
+                corner.v0 += offset.v0;
+                if (corner.v1 != 0) corner.v1 += offset.v1;
+                corner.v2 += offset.v2;
+            }
+        }
+
+        public void MoveLiveZeroPose(HmdVector3_t offset)
+        {
+            var standingPos = new HmdMatrix34_t();
+            var sittingPos = new HmdMatrix34_t();
+
+            OpenVR.ChaperoneSetup.GetWorkingStandingZeroPoseToRawTrackingPose(ref standingPos);
+            OpenVR.ChaperoneSetup.GetWorkingSeatedZeroPoseToRawTrackingPose(ref sittingPos);
+
+            // As the zero pose is relative to the unvierse calibration and not the play area 
+            // we need to adjust the offset with the rotation of the universe.
+            offset = Utils.MultiplyVectorWithRotationMatrix(offset, standingPos);
+            standingPos.m3 += offset.v0;
+            standingPos.m7 += offset.v1;
+            standingPos.m11 += offset.v2;
+            sittingPos.m3 += offset.v0;
+            sittingPos.m7 += offset.v1;
+            sittingPos.m11 += offset.v2;
+
+            OpenVR.ChaperoneSetup.SetWorkingStandingZeroPoseToRawTrackingPose(ref standingPos);
+            OpenVR.ChaperoneSetup.SetWorkingSeatedZeroPoseToRawTrackingPose(ref sittingPos);
+        }
         #endregion
 
         #region controller
@@ -92,6 +155,20 @@ namespace BOLL7708
             var success = OpenVR.System.GetControllerState(index, ref state, (uint) System.Runtime.InteropServices.Marshal.SizeOf(state));
             if (_debug && !success) Debug.WriteLine("Failure getting ControllerState");
             return state;
+        }
+
+        /**
+         * Will return the index of the role if found, otherwise uint.MaxValue
+         * Useful if you want to know which controller is right or left.
+         */
+        public uint GetIndexForControllerRole(ETrackedControllerRole role)
+        {
+            for (uint i = 0; i < OpenVR.k_unMaxTrackedDeviceCount; i++)
+            {
+                var r = OpenVR.System.GetControllerRoleForTrackedDeviceIndex(i);
+                if (r == role) return i;
+            }
+            return uint.MaxValue;
         }
         #endregion
 
@@ -148,5 +225,25 @@ namespace BOLL7708
             return vrEvents.ToArray();
         }
         #endregion
+
+        public static class Utils
+        {
+            public static HmdVector3_t InvertVector(HmdVector3_t position)
+            {
+                position.v0 = -position.v0;
+                position.v1 = -position.v1;
+                position.v2 = -position.v2;
+                return position;
+            }
+
+            public static HmdVector3_t MultiplyVectorWithRotationMatrix(HmdVector3_t v, HmdMatrix34_t m)
+            {
+                var newVector = new HmdVector3_t();
+                newVector.v0 = m.m0 * v.v0 + m.m1 * v.v1 + m.m2 * v.v2;
+                newVector.v1 = m.m4 * v.v0 + m.m5 * v.v1 + m.m6 * v.v2;
+                newVector.v2 = m.m8 * v.v0 + m.m9 * v.v1 + m.m10 * v.v2;
+                return newVector;
+            }
+        }
     }
 }
