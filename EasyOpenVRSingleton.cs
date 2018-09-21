@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using Valve.VR;
 
@@ -61,8 +61,20 @@ namespace BOLL7708
         public Compositor_CumulativeStats GetCumulativeStats()
         {
             Compositor_CumulativeStats stats = new Compositor_CumulativeStats();
-            OpenVR.Compositor.GetCumulativeStats(ref stats, (uint)System.Runtime.InteropServices.Marshal.SizeOf(stats));
+            OpenVR.Compositor.GetCumulativeStats(ref stats, (uint) Marshal.SizeOf(stats));
             return stats;
+        }
+
+        public Compositor_FrameTiming GetFrameTiming()
+        {
+            Compositor_FrameTiming timing = new Compositor_FrameTiming();
+            timing.m_nSize = (uint) Marshal.SizeOf(timing);
+            var success = OpenVR.Compositor.GetFrameTiming(ref timing, 0);
+            if(_debug && !success)
+            {
+                Debug.WriteLine("Could not get frame timing.");
+            }
+            return timing;
         }
         #endregion
 
@@ -154,7 +166,7 @@ namespace BOLL7708
         public VRControllerState_t GetControllerState(uint index)
         {
             VRControllerState_t state = new VRControllerState_t();
-            var success = OpenVR.System.GetControllerState(index, ref state, (uint) System.Runtime.InteropServices.Marshal.SizeOf(state));
+            var success = OpenVR.System.GetControllerState(index, ref state, (uint) Marshal.SizeOf(state));
             if (_debug && !success) Debug.WriteLine("Failure getting ControllerState");
             return state;
         }
@@ -204,7 +216,7 @@ namespace BOLL7708
         {
             var vrEvents = new List<VREvent_t>();
             var vrEvent = new VREvent_t();
-            uint eventSize = (uint)System.Runtime.InteropServices.Marshal.SizeOf(vrEvent);
+            uint eventSize = (uint) Marshal.SizeOf(vrEvent);
             try
             {
                 while (OpenVR.System.PollNextEvent(ref vrEvent, eventSize))
@@ -226,7 +238,7 @@ namespace BOLL7708
         {
             var vrEvents = new List<VREvent_t>();
             var vrEvent = new VREvent_t();
-            uint eventSize = (uint)System.Runtime.InteropServices.Marshal.SizeOf(vrEvent);
+            uint eventSize = (uint) Marshal.SizeOf(vrEvent);
             while (OpenVR.Overlay.PollNextOverlayEvent(overlayHandle, ref vrEvent, eventSize))
             {
                 vrEvents.Add(vrEvent);
