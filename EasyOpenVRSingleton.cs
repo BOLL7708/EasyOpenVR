@@ -192,24 +192,37 @@ namespace BOLL7708
          */
         public float GetFloatTrackedDeviceProperty(uint index, ETrackedDeviceProperty property)
         {
-            ETrackedPropertyError error = new ETrackedPropertyError();
+            var error = new ETrackedPropertyError();
+            var result = OpenVR.System.GetFloatTrackedDeviceProperty(index, property, ref error);
             var success = error == ETrackedPropertyError.TrackedProp_Success;
             if (_debug && !success) Debug.WriteLine("OpenVR Float Prop Error: " + error.ToString());
-            return OpenVR.System.GetFloatTrackedDeviceProperty(index, property, ref error);
+            return result;
         }
         /*
          * Example of property: ETrackedDeviceProperty.Prop_SerialNumber_String
          */
         public string GetStringTrackedDeviceProperty(uint index, ETrackedDeviceProperty property)
         {
-            ETrackedPropertyError error = new ETrackedPropertyError();
+            var error = new ETrackedPropertyError();
             StringBuilder sb = new StringBuilder();
-            OpenVR.System.GetStringTrackedDeviceProperty(index, ETrackedDeviceProperty.Prop_SerialNumber_String, sb, OpenVR.k_unMaxPropertyStringSize, ref error);
+            OpenVR.System.GetStringTrackedDeviceProperty(index, property, sb, OpenVR.k_unMaxPropertyStringSize, ref error);
             var success = error == ETrackedPropertyError.TrackedProp_Success;
             if (_debug && !success) Debug.WriteLine("OpenVR String Prop Error: " + error.ToString());
             return sb.ToString();
         }
         #endregion
+
+        /*
+         * Example of property: ETrackedDeviceProperty.Prop_EdidProductID_Int32
+         */
+        public int GetIntegerTrackedDeviceProperty(uint index, ETrackedDeviceProperty property)
+        {
+            var error = new ETrackedPropertyError();
+            var result = OpenVR.System.GetInt32TrackedDeviceProperty(index, property, ref error);
+            var success = error == ETrackedPropertyError.TrackedProp_Success;
+            if (_debug && !success) Debug.WriteLine("OpenVR Integer Prop Error: " + error.ToString());
+            return result;
+        }
 
         #region events
         public VREvent_t[] GetNewEvents()
