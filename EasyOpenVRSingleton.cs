@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using Valve.VR;
@@ -279,6 +280,21 @@ namespace BOLL7708
             _initState = 0;
         }
 
+        #endregion
+
+        #region system
+        public String GetRuntimeVersion()
+        {
+            var version = "";
+            if(OpenVR.IsRuntimeInstalled())
+            {
+                String path = OpenVR.RuntimePath() + "bin\\version.txt";
+                Debug.WriteLine(path);
+                if(File.Exists(path)) version = File.ReadAllText(path);
+                Debug.WriteLine(version);
+            }
+            return version;
+        }
         #endregion
 
         #region utils
