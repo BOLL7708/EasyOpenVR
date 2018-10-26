@@ -288,10 +288,14 @@ namespace BOLL7708
             var version = "";
             if(OpenVR.IsRuntimeInstalled())
             {
-                String path = OpenVR.RuntimePath() + "bin\\version.txt";
-                Debug.WriteLine(path);
-                if(File.Exists(path)) version = File.ReadAllText(path);
-                Debug.WriteLine(version);
+                try
+                {
+                    String path = OpenVR.RuntimePath() + "bin\\version.txt";
+                    if(File.Exists(path)) version = File.ReadAllText(path).Trim();
+                } catch(Exception e)
+                {
+                    if(_debug) Debug.WriteLine("Error reading runtime version: " + e.Message);
+                }
             }
             return version;
         }
