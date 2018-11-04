@@ -194,7 +194,15 @@ namespace BOLL7708
         public float GetFloatTrackedDeviceProperty(uint index, ETrackedDeviceProperty property)
         {
             var error = new ETrackedPropertyError();
-            var result = OpenVR.System.GetFloatTrackedDeviceProperty(index, property, ref error);
+            var result = 0f;
+            try
+            {
+                result = OpenVR.System.GetFloatTrackedDeviceProperty(index, property, ref error);
+            }
+            catch (Exception e)
+            {
+                if (_debug) Debug.WriteLine($"OpenVR Float Prop Exception: {e.Message}");
+            }
             var success = error == ETrackedPropertyError.TrackedProp_Success;
             if (_debug && !success) Debug.WriteLine("OpenVR Float Prop Error: " + error.ToString());
             return result;
@@ -206,7 +214,14 @@ namespace BOLL7708
         {
             var error = new ETrackedPropertyError();
             StringBuilder sb = new StringBuilder();
-            OpenVR.System.GetStringTrackedDeviceProperty(index, property, sb, OpenVR.k_unMaxPropertyStringSize, ref error);
+            try
+            {
+                OpenVR.System.GetStringTrackedDeviceProperty(index, property, sb, OpenVR.k_unMaxPropertyStringSize, ref error);
+            }
+            catch (Exception e)
+            {
+                if (_debug) Debug.WriteLine($"OpenVR String Prop Exception: {e.Message}");
+            }
             var success = error == ETrackedPropertyError.TrackedProp_Success;
             if (_debug && !success) Debug.WriteLine("OpenVR String Prop Error: " + error.ToString());
             return sb.ToString();
@@ -219,7 +234,15 @@ namespace BOLL7708
         public int GetIntegerTrackedDeviceProperty(uint index, ETrackedDeviceProperty property)
         {
             var error = new ETrackedPropertyError();
-            var result = OpenVR.System.GetInt32TrackedDeviceProperty(index, property, ref error);
+            var result = 0;
+            try
+            {
+                result = OpenVR.System.GetInt32TrackedDeviceProperty(index, property, ref error);
+            }
+            catch (Exception e)
+            {
+                if (_debug) Debug.WriteLine($"OpenVR Integer Prop Exception: {e.Message}");
+            }
             var success = error == ETrackedPropertyError.TrackedProp_Success;
             if (_debug && !success) Debug.WriteLine("OpenVR Integer Prop Error: " + error.ToString());
             return result;
