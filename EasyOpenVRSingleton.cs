@@ -17,7 +17,7 @@ namespace BOLL7708
         private static EasyOpenVRSingleton __instance = null;
         private EasyOpenVRSingleton() { }
 
-        private bool _debug = false;
+        private bool _debug = true;
         private EVRApplicationType _appType = EVRApplicationType.VRApplication_Background;
         public static EasyOpenVRSingleton Instance
         {
@@ -46,8 +46,14 @@ namespace BOLL7708
         private uint _initState = 0;
         public bool Init()
         {
-            EVRInitError error = EVRInitError.None;
-            _initState = OpenVR.InitInternal(ref error, _appType);
+            EVRInitError error = EVRInitError.Unknown;
+            try {
+                _initState = OpenVR.InitInternal(ref error, _appType);
+            }
+            catch (Exception e)
+            {
+                if (_debug) Debug.WriteLine($"You might be building for 32bit with a 64bit .dll, error: {e.Message}");
+            }
             var success = error == EVRInitError.None;
             if (_debug && !success) Debug.WriteLine("OpenVR Init Error: " + error.ToString());
             return success && _initState > 0;
@@ -73,7 +79,7 @@ namespace BOLL7708
             var success = OpenVR.Compositor.GetFrameTiming(ref timing, 0);
             if(_debug && !success)
             {
-                Debug.WriteLine("Could not get frame timing.");
+                if (_debug) Debug.WriteLine("Could not get frame timing.");
             }
             return timing;
         }
@@ -262,7 +268,7 @@ namespace BOLL7708
                 }
             } catch(Exception e)
             {
-                Debug.WriteLine($"Could not get new events: {e.StackTrace}");
+                if (_debug) Debug.WriteLine($"Could not get new events: {e.StackTrace}");
             }
             
             return vrEvents.ToArray();
@@ -281,6 +287,27 @@ namespace BOLL7708
                 vrEvents.Add(vrEvent);
             }
             return vrEvents.ToArray();
+        }
+        #endregion
+
+        #region screenshots
+
+        /*
+         * When used the files should end up in %programfiles(x86)%\Steam\steamapps\common\SteamVR\bin\
+         */
+        public bool TakeScreenshot()
+        {
+            uint handle = 0;
+            var timestamp = DateTime.Now.ToString("yyyyMMddHHmmss_ffff");
+
+            // Stereo is default and supported by every scene application, will not show notification.
+            // This also means you have to be running a scene application for a screenshot to be saved.
+            var error = OpenVR.Screenshots.TakeStereoScreenshot(ref handle, timestamp, $"{timestamp}_vr");
+            if (error != EVRScreenshotError.None)
+            {
+                if(_debug) Debug.WriteLine("Screenshot error: " + Enum.GetName(typeof(EVRScreenshotError), error));
+            }
+            return error == EVRScreenshotError.None;
         }
         #endregion
 
