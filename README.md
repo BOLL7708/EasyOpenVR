@@ -16,3 +16,4 @@ As this is a work-in-progress things might get renamed along the way, hopefully 
 2. If you want your application to be something else than `VRApplication_Background` you can set that with `instance.SetApplicationType()`
 3. With the instance run `instance.Init()` to connect to a running OpenVR session. It will return true if initialization was successful, otherwise run a timer and try to init as often as you see fit.
 4. At this point, if you have a connected session, you can explore the various calls you can do.
+5. If your project is missing for example `System.Drawing`, check References in your project, choose "_Add reference..._" and check `System.Drawing` for inclusion.
