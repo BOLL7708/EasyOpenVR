@@ -18,6 +18,7 @@ namespace BOLL7708
         private EasyOpenVRSingleton() { }
 
         private bool _debug = true;
+        private Random _rnd = new Random();
         private EVRApplicationType _appType = EVRApplicationType.VRApplication_Background;
         public static EasyOpenVRSingleton Instance
         {
@@ -308,6 +309,74 @@ namespace BOLL7708
                 if(_debug) Debug.WriteLine("Screenshot error: " + Enum.GetName(typeof(EVRScreenshotError), error));
             }
             return error == EVRScreenshotError.None;
+        }
+        #endregion
+
+        #region notifications
+        /*
+         * Thank you artumino and in extension Marlamin on GitHub for their public code which I referenced for notifications.
+         * Also thanks to Valve for finally adding the interface for notifications to the C# header file.
+         * 
+         * In reality I tried implementing notifications back in April 2016, poked Valve about it in October the same year,
+         * pointed out what was missing in May and December 2017, yet again in January 2019 and boom, now we have it!
+         */
+
+        private List<uint> _notifications = new List<uint>();
+
+        /*
+         * We initialize an overlay to display notifications with.
+         * The title will be visible above the notification.
+         * Returns the handle used to send notifications, 0 on fail.
+         */
+        public ulong InitNotificationOverlay(string notificationTitle)
+        {
+            var error = EVROverlayError.None;
+            ulong handle = 0;
+            var key = Guid.NewGuid().ToString();
+            error = OpenVR.Overlay.CreateOverlay(key, notificationTitle, ref handle);
+            if (error == EVROverlayError.None) return handle;
+            else if (_debug) Debug.WriteLine($"Notification overlay error: {Enum.GetName(typeof(EVROverlayError), error)}");
+            return 0;
+        }
+
+        public uint EnqueueNotification(ulong overlayHandle, string message, ref NotificationBitmap_t bitmap)
+        {
+            return EnqueueNotification(overlayHandle, EVRNotificationType.Transient, message, EVRNotificationStyle.None, bitmap);
+        }
+
+        /*
+         * Will enqueue a notification to be displayed in the headset.
+         * Returns ID for this specific notification.
+         */
+        public uint EnqueueNotification(ulong overlayHandle, EVRNotificationType type, string message, EVRNotificationStyle style, NotificationBitmap_t bitmap)
+        {
+            uint id = 0;
+            while (id == 0 || _notifications.Contains(id)) id = (uint)_rnd.Next();
+            var error = OpenVR.Notifications.CreateNotification(overlayHandle, 0, type, message, style, ref bitmap, ref id);
+            if (_debug && error != EVRNotificationError.OK) Debug.WriteLine($"Show notification error: {Enum.GetName(typeof(EVRNotificationError), error)}");
+            _notifications.Add(id);
+            return id;
+        }
+
+        /*
+         * Used to dismiss a persistent notification.
+         */
+        public void DismissNotification(uint id)
+        {
+            var error = OpenVR.Notifications.RemoveNotification(id);
+            if (_debug && error != EVRNotificationError.OK) Debug.WriteLine($"Hide notification error: {Enum.GetName(typeof(EVRNotificationError), error)}");
+            else _notifications.Remove(id);
+        }
+
+        public void EmptyNotificationsQueue()
+        {
+            var error = EVRNotificationError.OK;
+            foreach (uint id in _notifications)
+            {
+                error = OpenVR.Notifications.RemoveNotification(id);
+                if (_debug && error != EVRNotificationError.OK) Debug.WriteLine($"Clear notifications error: {Enum.GetName(typeof(EVRNotificationError), error)}");
+            }
+            _notifications.Clear();
         }
         #endregion
 
