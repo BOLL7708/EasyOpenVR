@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -439,6 +441,35 @@ namespace BOLL7708
                 newVector.v1 = m.m4 * v.v0 + m.m5 * v.v1 + m.m6 * v.v2;
                 newVector.v2 = m.m8 * v.v0 + m.m9 * v.v1 + m.m10 * v.v2;
                 return newVector;
+            }
+        }
+
+        public static class BitmapUtils
+        {
+            public static NotificationBitmap_t NotificationBitmapFromBitmap(Bitmap bmp)
+            {
+                return NotificationBitmapFromBitmapData(BitmapDataFromBitmap(bmp));
+            }
+
+            public static BitmapData BitmapDataFromBitmap(Bitmap bmpIn)
+            {
+                Bitmap bmp = (Bitmap)bmpIn.Clone();
+                BitmapData texData = bmp.LockBits(
+                    new Rectangle(0, 0, bmp.Width, bmp.Height),
+                    ImageLockMode.ReadOnly,
+                    PixelFormat.Format32bppArgb
+                );
+                return texData;
+            }
+
+            public static NotificationBitmap_t NotificationBitmapFromBitmapData(BitmapData TextureData)
+            {
+                NotificationBitmap_t notification_icon = new NotificationBitmap_t();
+                notification_icon.m_pImageData = TextureData.Scan0;
+                notification_icon.m_nWidth = TextureData.Width;
+                notification_icon.m_nHeight = TextureData.Height;
+                notification_icon.m_nBytesPerPixel = 4;
+                return notification_icon;
             }
         }
 
