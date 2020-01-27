@@ -341,6 +341,11 @@ namespace BOLL7708
             return 0;
         }
 
+        public uint EnqueueNotification(ulong overlayHandle, string message)
+        {
+            return EnqueueNotification(overlayHandle, message, new NotificationBitmap_t());
+        }
+
         public uint EnqueueNotification(ulong overlayHandle, string message, NotificationBitmap_t bitmap)
         {
             return EnqueueNotification(overlayHandle, EVRNotificationType.Transient, message, EVRNotificationStyle.Application, bitmap);
