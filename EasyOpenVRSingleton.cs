@@ -235,7 +235,7 @@ namespace BOLL7708
             if (_debug && !success) Debug.WriteLine("OpenVR String Prop Error: " + error.ToString());
             return sb.ToString();
         }
-        #endregion
+
 
         /*
          * Example of property: ETrackedDeviceProperty.Prop_EdidProductID_Int32
@@ -256,6 +256,7 @@ namespace BOLL7708
             if (_debug && !success) Debug.WriteLine("OpenVR Integer Prop Error: " + error.ToString());
             return result;
         }
+        #endregion
 
         #region events
         public VREvent_t[] GetNewEvents()
@@ -290,6 +291,137 @@ namespace BOLL7708
                 vrEvents.Add(vrEvent);
             }
             return vrEvents.ToArray();
+        }
+        #endregion
+
+        #region input
+        public enum InputType
+        {
+            Analog,
+            Digital
+        }
+        private class InputAction
+        {
+            public ulong handle;
+            public object data;
+            public InputType type;
+            public object action;
+        }
+        
+        private List<InputAction> _inputActions = new List<InputAction>();
+        private List<VRActiveActionSet_t> _inputActionSets = new List<VRActiveActionSet_t>();
+
+        /**
+         * Load the actions manifest to register actions for the application
+         * OBS: Make sure the encoding is UTF8 and not UTF8+BOM
+         */
+        public EVRInputError LoadActionManifest(string relativePath)
+        {
+            return OpenVR.Input.SetActionManifestPath(Path.GetFullPath(relativePath));
+        }
+
+        public EVRInputError RegisterActionSet(string path)
+        {
+            ulong handle = 0;
+            var error = OpenVR.Input.GetActionSetHandle(path, ref handle);
+            if (handle != 0 && error == EVRInputError.None)
+            {
+                var actionSet = new VRActiveActionSet_t
+                {
+                    ulActionSet = handle,
+                    ulRestrictedToDevice = OpenVR.k_ulInvalidActionSetHandle,
+                    nPriority = 0
+                };
+                _inputActionSets.Add(actionSet);
+            } else
+            {
+                if (_debug) Debug.WriteLine($"Could not register action set: {Enum.GetName(typeof(EVRInputError), error)}");
+            }
+            return error;
+        }
+
+        private EVRInputError RegisterAction(string path, ref InputAction ia)
+        {
+            ulong handle = 0;
+            var error = OpenVR.Input.GetActionHandle(path, ref handle);
+            if (handle != 0 && error == EVRInputError.None)
+            {
+                ia.handle = handle;
+                _inputActions.Add(ia);
+            }
+            else if (_debug) Debug.WriteLine($"Could not register action: {Enum.GetName(typeof(EVRInputError), error)}");
+            return error;
+        }
+
+        /**
+         * Register an analog action with a callback action
+         */
+        public EVRInputError RegisterAnalogAction(string path, Action<float, float, float> action)
+        {
+            var ia = new InputAction
+            {
+                type = InputType.Analog,
+                action = action,
+                data = new InputAnalogActionData_t()
+            };
+            return RegisterAction(path, ref ia);
+        }
+
+        /**
+         * Register a digital action with a callback action
+         */
+        public EVRInputError RegisterDigitalAction(string path, Action<bool> action)
+        {
+            var inputAction = new InputAction
+            {
+                type = InputType.Digital,
+                action = action,
+                data = new InputDigitalActionData_t()
+            };
+            return RegisterAction(path, ref inputAction);
+        }
+
+        /**
+         * Update all action states, this will trigger stored actions if needed.
+         * Digital actions triggers on change, analog actions every update.
+         */
+        public void UpdateActionStates()
+        {
+            var error = OpenVR.Input.UpdateActionState(_inputActionSets.ToArray(), (uint)Marshal.SizeOf(typeof(VRActiveActionSet_t)));
+            if (_debug && error != EVRInputError.None) Debug.WriteLine($"UpdateActionState Error: {Enum.GetName(typeof(EVRInputError), error)}");
+
+            _inputActions.ForEach((InputAction action) =>
+            {
+                switch(action.type)
+                {
+                    case InputType.Analog:
+                        GetAnalogAction(action);
+                        break;
+                    case InputType.Digital:
+                        GetDigitalAction(action);
+                        break;
+                }
+            });
+        }
+
+        private void GetAnalogAction(InputAction inputAction)
+        {
+            var size = (uint)Marshal.SizeOf(typeof(InputAnalogActionData_t));
+            var data = (InputAnalogActionData_t)inputAction.data;
+            var error = OpenVR.Input.GetAnalogActionData(inputAction.handle, ref data, size, 0);
+            if (_debug && error != EVRInputError.None) Debug.WriteLine($"AnalogActionDataError: {Enum.GetName(typeof(EVRInputError), error)}, handle: {inputAction.handle}");
+            var action = ((Action<float, float, float>)inputAction.action);
+            if (data.bActive) action.Invoke(data.x, data.y, data.z);
+        }
+
+        private void GetDigitalAction(InputAction inputAction)
+        {
+            var size = (uint)Marshal.SizeOf(typeof(InputDigitalActionData_t));
+            var data = (InputDigitalActionData_t) inputAction.data;
+            var error = OpenVR.Input.GetDigitalActionData(inputAction.handle, ref data, size, 0);
+            if(_debug && error != EVRInputError.None) Debug.WriteLine($"DigitalActionDataError: {Enum.GetName(typeof(EVRInputError), error)}, handle: {inputAction.handle}");
+            var action = ((Action<bool>)inputAction.action);
+            if (data.bActive && data.bChanged) action.Invoke(data.bState);
         }
         #endregion
 
@@ -409,6 +541,19 @@ namespace BOLL7708
         #endregion
 
         #region system
+
+        /**
+         * Load an app manifest for the application
+         * Pretty sure this is required to show up in the input bindings interface
+         * OBS: Make sure the encoding is UTF8 and not UTF8+BOM
+         */
+        public EVRApplicationError LoadAppManifest(string relativePath)
+        {
+            var error = OpenVR.Applications.AddApplicationManifest(Path.GetFullPath(relativePath), false);
+            if (_debug && error != EVRApplicationError.None) Debug.WriteLine($"Failed to load Application Manifest: {Enum.GetName(typeof(EVRApplicationError), error)}");
+            return error;
+        }
+
         public String GetRuntimeVersion()
         {
             var version = "";
