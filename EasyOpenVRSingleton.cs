@@ -203,15 +203,7 @@ namespace BOLL7708
         public float GetFloatTrackedDeviceProperty(uint index, ETrackedDeviceProperty property)
         {
             var error = new ETrackedPropertyError();
-            var result = 0f;
-            try
-            {
-                result = OpenVR.System.GetFloatTrackedDeviceProperty(index, property, ref error);
-            }
-            catch (Exception e)
-            {
-                if (_debug) Debug.WriteLine($"OpenVR Float Prop Exception: {e.Message}");
-            }
+            var result = OpenVR.System.GetFloatTrackedDeviceProperty(index, property, ref error);
             var success = error == ETrackedPropertyError.TrackedProp_Success;
             if (_debug && !success) Debug.WriteLine("OpenVR Float Prop Error: " + error.ToString());
             return result;
@@ -222,15 +214,8 @@ namespace BOLL7708
         public string GetStringTrackedDeviceProperty(uint index, ETrackedDeviceProperty property)
         {
             var error = new ETrackedPropertyError();
-            StringBuilder sb = new StringBuilder();
-            try
-            {
-                OpenVR.System.GetStringTrackedDeviceProperty(index, property, sb, OpenVR.k_unMaxPropertyStringSize, ref error);
-            }
-            catch (Exception e)
-            {
-                if (_debug) Debug.WriteLine($"OpenVR String Prop Exception: {e.Message}");
-            }
+            StringBuilder sb = new StringBuilder((int)OpenVR.k_unMaxPropertyStringSize);
+            OpenVR.System.GetStringTrackedDeviceProperty(index, property, sb, OpenVR.k_unMaxPropertyStringSize, ref error);
             var success = error == ETrackedPropertyError.TrackedProp_Success;
             if (_debug && !success) Debug.WriteLine("OpenVR String Prop Error: " + error.ToString());
             return sb.ToString();
@@ -243,17 +228,21 @@ namespace BOLL7708
         public int GetIntegerTrackedDeviceProperty(uint index, ETrackedDeviceProperty property)
         {
             var error = new ETrackedPropertyError();
-            var result = 0;
-            try
-            {
-                result = OpenVR.System.GetInt32TrackedDeviceProperty(index, property, ref error);
-            }
-            catch (Exception e)
-            {
-                if (_debug) Debug.WriteLine($"OpenVR Integer Prop Exception: {e.Message}");
-            }
+            var result = OpenVR.System.GetInt32TrackedDeviceProperty(index, property, ref error);
             var success = error == ETrackedPropertyError.TrackedProp_Success;
             if (_debug && !success) Debug.WriteLine("OpenVR Integer Prop Error: " + error.ToString());
+            return result;
+        }
+
+        /*
+         * Example of property: ETrackedDeviceProperty.Prop_ContainsProximitySensor_Bool
+         */
+        public bool GetBooleanTrackedDeviceProperty(uint index, ETrackedDeviceProperty property)
+        {
+            var error = new ETrackedPropertyError();
+            var result = OpenVR.System.GetBoolTrackedDeviceProperty(index, property, ref error);
+            var success = error == ETrackedPropertyError.TrackedProp_Success;
+            if (_debug && !success) Debug.WriteLine("OpenVR Boolean Prop Error: " + error.ToString());
             return result;
         }
         #endregion
@@ -356,7 +345,7 @@ namespace BOLL7708
         /**
          * Register an analog action with a callback action
          */
-        public EVRInputError RegisterAnalogAction(string path, Action<float, float, float> action)
+        public EVRInputError RegisterAnalogAction(string path, Action<InputAnalogActionData_t> action)
         {
             var ia = new InputAction
             {
@@ -370,7 +359,7 @@ namespace BOLL7708
         /**
          * Register a digital action with a callback action
          */
-        public EVRInputError RegisterDigitalAction(string path, Action<bool> action)
+        public EVRInputError RegisterDigitalAction(string path, Action<InputDigitalActionData_t> action)
         {
             var inputAction = new InputAction
             {
@@ -410,8 +399,8 @@ namespace BOLL7708
             var data = (InputAnalogActionData_t)inputAction.data;
             var error = OpenVR.Input.GetAnalogActionData(inputAction.handle, ref data, size, 0);
             if (_debug && error != EVRInputError.None) Debug.WriteLine($"AnalogActionDataError: {Enum.GetName(typeof(EVRInputError), error)}, handle: {inputAction.handle}");
-            var action = ((Action<float, float, float>)inputAction.action);
-            if (data.bActive) action.Invoke(data.x, data.y, data.z);
+            var action = ((Action<InputAnalogActionData_t>)inputAction.action);
+            if (data.bActive) action.Invoke(data);
         }
 
         private void GetDigitalAction(InputAction inputAction)
@@ -420,8 +409,8 @@ namespace BOLL7708
             var data = (InputDigitalActionData_t) inputAction.data;
             var error = OpenVR.Input.GetDigitalActionData(inputAction.handle, ref data, size, 0);
             if(_debug && error != EVRInputError.None) Debug.WriteLine($"DigitalActionDataError: {Enum.GetName(typeof(EVRInputError), error)}, handle: {inputAction.handle}");
-            var action = ((Action<bool>)inputAction.action);
-            if (data.bActive && data.bChanged) action.Invoke(data.bState);
+            var action = ((Action<InputDigitalActionData_t>)inputAction.action);
+            if (data.bActive && data.bChanged) action.Invoke(data);
         }
         #endregion
 
@@ -554,19 +543,25 @@ namespace BOLL7708
             return error;
         }
 
-        public String GetRuntimeVersion()
+        /**
+         * Will return the application ID for the currently running scene application.
+         * Will return an empty string is there is no result.
+         */
+        public string GetRunningApplicationId()
         {
-            var version = "";
-            if(OpenVR.IsRuntimeInstalled())
+            var pid = OpenVR.Applications.GetCurrentSceneProcessId();
+            var sb = new StringBuilder((int)OpenVR.k_unMaxApplicationKeyLength);
+            var error = OpenVR.Applications.GetApplicationKeyByProcessId(pid, sb, OpenVR.k_unMaxApplicationKeyLength);
+            if(_debug && error != EVRApplicationError.None) Debug.WriteLine($"Failed to load Application ID: {Enum.GetName(typeof(EVRApplicationError), error)}");
+            return sb.ToString();
+        }
+
+        public string GetRuntimeVersion()
+        {
+            var version = "N/A";
+            if (OpenVR.IsRuntimeInstalled())
             {
-                try
-                {
-                    String path = OpenVR.RuntimePath() + "bin\\version.txt";
-                    if(File.Exists(path)) version = File.ReadAllText(path).Trim();
-                } catch(Exception e)
-                {
-                    if(_debug) Debug.WriteLine("Error reading runtime version: " + e.Message);
-                }
+                version = OpenVR.System.GetRuntimeVersion();
             }
             return version;
         }
