@@ -55,11 +55,10 @@ namespace BOLL7708
             }
             catch (Exception e)
             {
-                if (_debug) Debug.WriteLine($"You might be building for 32bit with a 64bit .dll, error: {e.Message}");
+                DebugLog(e, "You might be building for 32bit with a 64bit .dll, error");
             }
-            var success = error == EVRInitError.None;
-            if (_debug && !success) Debug.WriteLine("OpenVR Init Error: " + error.ToString());
-            return success && _initState > 0;
+            DebugLog(error);
+            return error == EVRInitError.None && _initState > 0;
         }
         public bool IsInitialized()
         {
@@ -80,10 +79,7 @@ namespace BOLL7708
             Compositor_FrameTiming timing = new Compositor_FrameTiming();
             timing.m_nSize = (uint) Marshal.SizeOf(timing);
             var success = OpenVR.Compositor.GetFrameTiming(ref timing, 0);
-            if(_debug && !success)
-            {
-                if (_debug) Debug.WriteLine("Could not get frame timing.");
-            }
+            if (!success) DebugLog("Could not get frame timing.");
             return timing;
         }
         #endregion
@@ -102,7 +98,7 @@ namespace BOLL7708
         {
             HmdQuad_t rect = new HmdQuad_t();
             var success = OpenVR.Chaperone.GetPlayAreaRect(ref rect);
-            if (_debug && !success) Debug.WriteLine("Failure getting PlayAreaRect");
+            if (!success) DebugLog("Failure getting PlayAreaRect");
             return rect;
         }
 
@@ -110,7 +106,7 @@ namespace BOLL7708
         {
             var size = new HmdVector2_t();
             var success = OpenVR.Chaperone.GetPlayAreaSize(ref size.v0, ref size.v1);
-            if (_debug && !success) Debug.WriteLine("Failure getting PlayAreaSize");
+            if (!success) DebugLog("Failure getting PlayAreaSize");
             return size;
         }
 
@@ -177,7 +173,7 @@ namespace BOLL7708
         {
             VRControllerState_t state = new VRControllerState_t();
             var success = OpenVR.System.GetControllerState(index, ref state, (uint) Marshal.SizeOf(state));
-            if (_debug && !success) Debug.WriteLine("Failure getting ControllerState");
+            if (!success) DebugLog("Failure getting ControllerState");
             return state;
         }
 
@@ -205,7 +201,7 @@ namespace BOLL7708
             var error = new ETrackedPropertyError();
             var result = OpenVR.System.GetFloatTrackedDeviceProperty(index, property, ref error);
             var success = error == ETrackedPropertyError.TrackedProp_Success;
-            if (_debug && !success) Debug.WriteLine("OpenVR Float Prop Error: " + error.ToString());
+            if (!success) DebugLog(error);
             return result;
         }
         /*
@@ -217,7 +213,7 @@ namespace BOLL7708
             StringBuilder sb = new StringBuilder((int)OpenVR.k_unMaxPropertyStringSize);
             OpenVR.System.GetStringTrackedDeviceProperty(index, property, sb, OpenVR.k_unMaxPropertyStringSize, ref error);
             var success = error == ETrackedPropertyError.TrackedProp_Success;
-            if (_debug && !success) Debug.WriteLine("OpenVR String Prop Error: " + error.ToString());
+            if (!success) DebugLog(error);
             return sb.ToString();
         }
 
@@ -230,7 +226,7 @@ namespace BOLL7708
             var error = new ETrackedPropertyError();
             var result = OpenVR.System.GetInt32TrackedDeviceProperty(index, property, ref error);
             var success = error == ETrackedPropertyError.TrackedProp_Success;
-            if (_debug && !success) Debug.WriteLine("OpenVR Integer Prop Error: " + error.ToString());
+            if (!success) DebugLog(error);
             return result;
         }
 
@@ -242,7 +238,7 @@ namespace BOLL7708
             var error = new ETrackedPropertyError();
             var result = OpenVR.System.GetBoolTrackedDeviceProperty(index, property, ref error);
             var success = error == ETrackedPropertyError.TrackedProp_Success;
-            if (_debug && !success) Debug.WriteLine("OpenVR Boolean Prop Error: " + error.ToString());
+            if (!success) DebugLog(error);
             return result;
         }
         #endregion
@@ -324,7 +320,7 @@ namespace BOLL7708
                 _inputActionSets.Add(actionSet);
             } else
             {
-                if (_debug) Debug.WriteLine($"Could not register action set: {Enum.GetName(typeof(EVRInputError), error)}");
+                DebugLog(error);
             }
             return error;
         }
@@ -338,7 +334,7 @@ namespace BOLL7708
                 ia.handle = handle;
                 _inputActions.Add(ia);
             }
-            else if (_debug) Debug.WriteLine($"Could not register action: {Enum.GetName(typeof(EVRInputError), error)}");
+            else DebugLog(error);
             return error;
         }
 
@@ -377,7 +373,7 @@ namespace BOLL7708
         public void UpdateActionStates()
         {
             var error = OpenVR.Input.UpdateActionState(_inputActionSets.ToArray(), (uint)Marshal.SizeOf(typeof(VRActiveActionSet_t)));
-            if (_debug && error != EVRInputError.None) Debug.WriteLine($"UpdateActionState Error: {Enum.GetName(typeof(EVRInputError), error)}");
+            DebugLog(error);
 
             _inputActions.ForEach((InputAction action) =>
             {
@@ -427,10 +423,7 @@ namespace BOLL7708
             // Stereo is default and supported by every scene application, will not show notification.
             // This also means you have to be running a scene application for a screenshot to be saved.
             var error = OpenVR.Screenshots.TakeStereoScreenshot(ref handle, timestamp, $"{timestamp}_vr");
-            if (error != EVRScreenshotError.None)
-            {
-                if(_debug) Debug.WriteLine("Screenshot error: " + Enum.GetName(typeof(EVRScreenshotError), error));
-            }
+            DebugLog(error);
             return error == EVRScreenshotError.None;
         }
         #endregion
@@ -458,7 +451,7 @@ namespace BOLL7708
             var key = Guid.NewGuid().ToString();
             error = OpenVR.Overlay.CreateOverlay(key, notificationTitle, ref handle);
             if (error == EVROverlayError.None) return handle;
-            else if (_debug) Debug.WriteLine($"Notification overlay error: {Enum.GetName(typeof(EVROverlayError), error)}");
+            else DebugLog(error);
             return 0;
         }
 
@@ -479,9 +472,9 @@ namespace BOLL7708
         public uint EnqueueNotification(ulong overlayHandle, EVRNotificationType type, string message, EVRNotificationStyle style, NotificationBitmap_t bitmap)
         {
             uint id = 0;
-            while (id == 0 || _notifications.Contains(id)) id = (uint)_rnd.Next();
+            while (id == 0 || _notifications.Contains(id)) id = (uint)_rnd.Next(); // Not sure why we do this
             var error = OpenVR.Notifications.CreateNotification(overlayHandle, 0, type, message, style, ref bitmap, ref id);
-            if (_debug && error != EVRNotificationError.OK) Debug.WriteLine($"Show notification error: {Enum.GetName(typeof(EVRNotificationError), error)}");
+            DebugLog(error);
             _notifications.Add(id);
             return id;
         }
@@ -492,8 +485,7 @@ namespace BOLL7708
         public void DismissNotification(uint id)
         {
             var error = OpenVR.Notifications.RemoveNotification(id);
-            if (_debug && error != EVRNotificationError.OK) Debug.WriteLine($"Hide notification error: {Enum.GetName(typeof(EVRNotificationError), error)}");
-            else _notifications.Remove(id);
+            if(!DebugLog(error)) _notifications.Remove(id);
         }
 
         public void EmptyNotificationsQueue()
@@ -502,7 +494,7 @@ namespace BOLL7708
             foreach (uint id in _notifications)
             {
                 error = OpenVR.Notifications.RemoveNotification(id);
-                if (_debug && error != EVRNotificationError.OK) Debug.WriteLine($"Clear notifications error: {Enum.GetName(typeof(EVRNotificationError), error)}");
+                DebugLog(error);
             }
             _notifications.Clear();
         }
@@ -539,7 +531,7 @@ namespace BOLL7708
         public EVRApplicationError LoadAppManifest(string relativePath)
         {
             var error = OpenVR.Applications.AddApplicationManifest(Path.GetFullPath(relativePath), false);
-            if (_debug && error != EVRApplicationError.None) Debug.WriteLine($"Failed to load Application Manifest: {Enum.GetName(typeof(EVRApplicationError), error)}");
+            DebugLog(error);
             return error;
         }
 
@@ -552,7 +544,7 @@ namespace BOLL7708
             var pid = OpenVR.Applications.GetCurrentSceneProcessId();
             var sb = new StringBuilder((int)OpenVR.k_unMaxApplicationKeyLength);
             var error = OpenVR.Applications.GetApplicationKeyByProcessId(pid, sb, OpenVR.k_unMaxApplicationKeyLength);
-            if(_debug && error != EVRApplicationError.None) Debug.WriteLine($"Failed to load Application ID: {Enum.GetName(typeof(EVRApplicationError), error)}");
+            DebugLog(error);
             return sb.ToString();
         }
 
@@ -564,6 +556,42 @@ namespace BOLL7708
                 version = OpenVR.System.GetRuntimeVersion();
             }
             return version;
+        }
+        #endregion
+
+        #region private_utils
+        private void DebugLog(string message)
+        {
+            if (_debug)
+            {
+                var st = new StackTrace();
+                var sf = st.GetFrame(1);
+                var methodName = sf.GetMethod().Name;
+                Debug.WriteLine($"{methodName}: {message}");
+            }
+        }
+        private bool DebugLog(Enum e, string message = "error")
+        {
+            var errorVal = Convert.ChangeType(e, e.GetTypeCode());
+            var ok = (int)errorVal == 0;
+            if (_debug)
+            {
+                var st = new StackTrace();
+                var sf = st.GetFrame(1);
+                var methodName = sf.GetMethod().Name;              
+                if(!ok) Debug.WriteLine($"{methodName} {message}: {Enum.GetName(e.GetType(), e)}");
+            }
+            return ok;
+        }
+        private void DebugLog(Exception e, string message = "error")
+        {
+            if (_debug)
+            {
+                var st = new StackTrace();
+                var sf = st.GetFrame(1);
+                var methodName = sf.GetMethod().Name;
+                Debug.WriteLine($"{methodName} {message}: {e.Message}");
+            }
         }
         #endregion
 
