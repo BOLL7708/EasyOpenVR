@@ -241,6 +241,12 @@ namespace BOLL7708
             if (!success) DebugLog(error);
             return result;
         }
+
+        public void TriggerHapticPulseInController(ETrackedControllerRole role)
+        {
+            var index = GetIndexForControllerRole(ETrackedControllerRole.LeftHand);
+            OpenVR.System.TriggerHapticPulse(index, 0, 10000); // This works: https://github.com/ValveSoftware/openvr/wiki/IVRSystem::TriggerHapticPulse
+        }
         #endregion
 
         #region events
@@ -341,7 +347,7 @@ namespace BOLL7708
         /**
          * Register an analog action with a callback action
          */
-        public EVRInputError RegisterAnalogAction(string path, Action<InputAnalogActionData_t> action)
+        public EVRInputError RegisterAnalogAction(string path, Action<InputAnalogActionData_t, ulong> action)
         {
             var ia = new InputAction
             {
@@ -355,7 +361,7 @@ namespace BOLL7708
         /**
          * Register a digital action with a callback action
          */
-        public EVRInputError RegisterDigitalAction(string path, Action<InputDigitalActionData_t> action)
+        public EVRInputError RegisterDigitalAction(string path, Action<InputDigitalActionData_t, ulong> action)
         {
             var inputAction = new InputAction
             {
@@ -367,46 +373,60 @@ namespace BOLL7708
         }
 
         /**
+         * Retrieve the handle for the input source of a specific input device
+         */
+        public ulong GetInputSourceHandle(string path, ref EVRInputError error)
+        {
+            ulong handle = 0;
+            error = OpenVR.Input.GetInputSourceHandle(path, ref handle);
+            DebugLog(error);
+            return handle;
+        }
+        
+
+        /**
          * Update all action states, this will trigger stored actions if needed.
          * Digital actions triggers on change, analog actions every update.
+         * OBS: Only run this once per update, or you'll get no input data at all.
          */
-        public void UpdateActionStates()
+        public void UpdateActionStates(ulong[] inputSourceHandles = null)
         {
+            if (inputSourceHandles == null) inputSourceHandles = new ulong[] { OpenVR.k_ulInvalidInputValueHandle };
             var error = OpenVR.Input.UpdateActionState(_inputActionSets.ToArray(), (uint)Marshal.SizeOf(typeof(VRActiveActionSet_t)));
             DebugLog(error);
-
+ 
             _inputActions.ForEach((InputAction action) =>
             {
                 switch(action.type)
                 {
                     case InputType.Analog:
-                        GetAnalogAction(action);
+                        foreach(var handle in inputSourceHandles) GetAnalogAction(action, handle);
                         break;
                     case InputType.Digital:
-                        GetDigitalAction(action);
+                        foreach (var handle in inputSourceHandles) GetDigitalAction(action, handle);
                         break;
                 }
             });
         }
 
-        private void GetAnalogAction(InputAction inputAction)
+        private void GetAnalogAction(InputAction inputAction, ulong inputSourceHandle)
         {
             var size = (uint)Marshal.SizeOf(typeof(InputAnalogActionData_t));
             var data = (InputAnalogActionData_t)inputAction.data;
-            var error = OpenVR.Input.GetAnalogActionData(inputAction.handle, ref data, size, 0);
-            if (_debug && error != EVRInputError.None) Debug.WriteLine($"AnalogActionDataError: {Enum.GetName(typeof(EVRInputError), error)}, handle: {inputAction.handle}");
-            var action = ((Action<InputAnalogActionData_t>)inputAction.action);
-            if (data.bActive) action.Invoke(data);
+            var error = OpenVR.Input.GetAnalogActionData(inputAction.handle, ref data, size, inputSourceHandle);
+            DebugLog(error, $"handle: {inputAction.handle}, error");
+            var action = ((Action<InputAnalogActionData_t, ulong>)inputAction.action);
+            if (data.bActive) action.Invoke(data, inputSourceHandle);
         }
 
-        private void GetDigitalAction(InputAction inputAction)
+        private void GetDigitalAction(InputAction inputAction, ulong inputSourceHandle)
         {
             var size = (uint)Marshal.SizeOf(typeof(InputDigitalActionData_t));
             var data = (InputDigitalActionData_t) inputAction.data;
-            var error = OpenVR.Input.GetDigitalActionData(inputAction.handle, ref data, size, 0);
-            if(_debug && error != EVRInputError.None) Debug.WriteLine($"DigitalActionDataError: {Enum.GetName(typeof(EVRInputError), error)}, handle: {inputAction.handle}");
-            var action = ((Action<InputDigitalActionData_t>)inputAction.action);
-            if (data.bActive && data.bChanged) action.Invoke(data);
+            var error = OpenVR.Input.GetDigitalActionData(inputAction.handle, ref data, size, inputSourceHandle);
+            DebugLog(error, $"handle: {inputAction.handle}, error");
+            var action = ((Action<InputDigitalActionData_t, ulong>)inputAction.action);
+            if (data.bActive && data.bChanged) action.Invoke(data, inputSourceHandle);
         }
         #endregion
 
