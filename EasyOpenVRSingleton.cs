@@ -22,6 +22,8 @@ namespace BOLL7708
         private bool _debug = true;
         private Random _rnd = new Random();
         private EVRApplicationType _appType = EVRApplicationType.VRApplication_Background;
+        private Action<string> _debugLogAction = null;
+
         public static EasyOpenVRSingleton Instance
         {
             get
@@ -42,6 +44,11 @@ namespace BOLL7708
         public void SetDebug(bool debug)
         {
             _debug = debug;
+        }
+
+        public void SetDebugLogAction(Action<string> action)
+        {
+            _debugLogAction = action;
         }
         #endregion
 
@@ -110,18 +117,21 @@ namespace BOLL7708
             return size;
         }
 
-        public void MoveUniverse(HmdVector3_t offset, bool moveChaperone = true, bool moveLiveZeroPose = true)
+        public bool MoveUniverse(HmdVector3_t offset, bool moveChaperone = true, bool moveLiveZeroPose = true)
         {
             OpenVR.ChaperoneSetup.RevertWorkingCopy(); // Sets working copy to current live settings
             if (moveLiveZeroPose) MoveLiveZeroPose(offset);
             if (moveChaperone) MoveChaperoneBounds(Utils.InvertVector(offset));
-            OpenVR.ChaperoneSetup.CommitWorkingCopy(EChaperoneConfigFile.Live); // Apply changes to live settings
+            var success = OpenVR.ChaperoneSetup.CommitWorkingCopy(EChaperoneConfigFile.Live); // Apply changes to live settings
+            if (!success) DebugLog("Failure to commit Chaperone changes.");
+            return success;
         }
 
-        public void MoveChaperoneBounds(HmdVector3_t offset)
+        public bool MoveChaperoneBounds(HmdVector3_t offset)
         {
             HmdQuad_t[] physQuad;
-            OpenVR.ChaperoneSetup.GetWorkingCollisionBoundsInfo(out physQuad);
+            var success = OpenVR.ChaperoneSetup.GetWorkingCollisionBoundsInfo(out physQuad);
+            if (!success) DebugLog("Failure to load Chaperone bounds.");
 
             for (int i = 0; i < physQuad.Length; i++)
             {
@@ -140,6 +150,7 @@ namespace BOLL7708
                 if (corner.v1 != 0) corner.v1 += offset.v1;
                 corner.v2 += offset.v2;
             }
+            return success;
         }
 
         public void MoveLiveZeroPose(HmdVector3_t offset)
@@ -178,17 +189,13 @@ namespace BOLL7708
         }
 
         /**
-         * Will return the index of the role if found, otherwise uint.MaxValue
+         * Will return the index of the role if found
          * Useful if you want to know which controller is right or left.
+         * Note: Seems redundant now, but wasn't in the past, I think.
          */
         public uint GetIndexForControllerRole(ETrackedControllerRole role)
         {
-            for (uint i = 0; i < OpenVR.k_unMaxTrackedDeviceCount; i++)
-            {
-                var r = OpenVR.System.GetControllerRoleForTrackedDeviceIndex(i);
-                if (r == role) return i;
-            }
-            return uint.MaxValue;
+            return OpenVR.System.GetTrackedDeviceIndexForControllerRole(role);
         }
         #endregion
 
@@ -200,8 +207,7 @@ namespace BOLL7708
         {
             var error = new ETrackedPropertyError();
             var result = OpenVR.System.GetFloatTrackedDeviceProperty(index, property, ref error);
-            var success = error == ETrackedPropertyError.TrackedProp_Success;
-            if (!success) DebugLog(error);
+            DebugLog(error);
             return result;
         }
         /*
@@ -212,8 +218,7 @@ namespace BOLL7708
             var error = new ETrackedPropertyError();
             StringBuilder sb = new StringBuilder((int)OpenVR.k_unMaxPropertyStringSize);
             OpenVR.System.GetStringTrackedDeviceProperty(index, property, sb, OpenVR.k_unMaxPropertyStringSize, ref error);
-            var success = error == ETrackedPropertyError.TrackedProp_Success;
-            if (!success) DebugLog(error);
+            DebugLog(error);
             return sb.ToString();
         }
 
@@ -225,8 +230,7 @@ namespace BOLL7708
         {
             var error = new ETrackedPropertyError();
             var result = OpenVR.System.GetInt32TrackedDeviceProperty(index, property, ref error);
-            var success = error == ETrackedPropertyError.TrackedProp_Success;
-            if (!success) DebugLog(error);
+            DebugLog(error);
             return result;
         }
 
@@ -237,8 +241,7 @@ namespace BOLL7708
         {
             var error = new ETrackedPropertyError();
             var result = OpenVR.System.GetBoolTrackedDeviceProperty(index, property, ref error);
-            var success = error == ETrackedPropertyError.TrackedProp_Success;
-            if (!success) DebugLog(error);
+            DebugLog(error);
             return result;
         }
 
@@ -311,7 +314,7 @@ namespace BOLL7708
             return OpenVR.Input.SetActionManifestPath(Path.GetFullPath(relativePath));
         }
 
-        public EVRInputError RegisterActionSet(string path)
+        public bool RegisterActionSet(string path)
         {
             ulong handle = 0;
             var error = OpenVR.Input.GetActionSetHandle(path, ref handle);
@@ -324,11 +327,8 @@ namespace BOLL7708
                     nPriority = 0
                 };
                 _inputActionSets.Add(actionSet);
-            } else
-            {
-                DebugLog(error);
             }
-            return error;
+            return DebugLog(error);
         }
 
         private EVRInputError RegisterAction(string path, ref InputAction ia)
@@ -347,7 +347,7 @@ namespace BOLL7708
         /**
          * Register an analog action with a callback action
          */
-        public EVRInputError RegisterAnalogAction(string path, Action<InputAnalogActionData_t, ulong> action)
+        public bool RegisterAnalogAction(string path, Action<InputAnalogActionData_t, ulong> action)
         {
             var ia = new InputAction
             {
@@ -355,13 +355,14 @@ namespace BOLL7708
                 action = action,
                 data = new InputAnalogActionData_t()
             };
-            return RegisterAction(path, ref ia);
+            var error = RegisterAction(path, ref ia);
+            return DebugLog(error);
         }
 
         /**
          * Register a digital action with a callback action
          */
-        public EVRInputError RegisterDigitalAction(string path, Action<InputDigitalActionData_t, ulong> action)
+        public bool RegisterDigitalAction(string path, Action<InputDigitalActionData_t, ulong> action)
         {
             var inputAction = new InputAction
             {
@@ -369,16 +370,17 @@ namespace BOLL7708
                 action = action,
                 data = new InputDigitalActionData_t()
             };
-            return RegisterAction(path, ref inputAction);
+            var error = RegisterAction(path, ref inputAction);
+            return DebugLog(error);
         }
 
         /**
          * Retrieve the handle for the input source of a specific input device
          */
-        public ulong GetInputSourceHandle(string path, ref EVRInputError error)
+        public ulong GetInputSourceHandle(string path)
         {
             ulong handle = 0;
-            error = OpenVR.Input.GetInputSourceHandle(path, ref handle);
+            var error = OpenVR.Input.GetInputSourceHandle(path, ref handle);
             DebugLog(error);
             return handle;
         }
@@ -389,11 +391,10 @@ namespace BOLL7708
          * Digital actions triggers on change, analog actions every update.
          * OBS: Only run this once per update, or you'll get no input data at all.
          */
-        public void UpdateActionStates(ulong[] inputSourceHandles = null)
+        public bool UpdateActionStates(ulong[] inputSourceHandles = null)
         {
             if (inputSourceHandles == null) inputSourceHandles = new ulong[] { OpenVR.k_ulInvalidInputValueHandle };
             var error = OpenVR.Input.UpdateActionState(_inputActionSets.ToArray(), (uint)Marshal.SizeOf(typeof(VRActiveActionSet_t)));
-            DebugLog(error);
  
             _inputActions.ForEach((InputAction action) =>
             {
@@ -407,26 +408,27 @@ namespace BOLL7708
                         break;
                 }
             });
+            return DebugLog(error);
         }
 
-        private void GetAnalogAction(InputAction inputAction, ulong inputSourceHandle)
+        private bool GetAnalogAction(InputAction inputAction, ulong inputSourceHandle)
         {
             var size = (uint)Marshal.SizeOf(typeof(InputAnalogActionData_t));
             var data = (InputAnalogActionData_t)inputAction.data;
             var error = OpenVR.Input.GetAnalogActionData(inputAction.handle, ref data, size, inputSourceHandle);
-            DebugLog(error, $"handle: {inputAction.handle}, error");
             var action = ((Action<InputAnalogActionData_t, ulong>)inputAction.action);
             if (data.bActive) action.Invoke(data, inputSourceHandle);
+            return DebugLog(error, $"handle: {inputAction.handle}, error");
         }
 
-        private void GetDigitalAction(InputAction inputAction, ulong inputSourceHandle)
+        private bool GetDigitalAction(InputAction inputAction, ulong inputSourceHandle)
         {
             var size = (uint)Marshal.SizeOf(typeof(InputDigitalActionData_t));
             var data = (InputDigitalActionData_t) inputAction.data;
             var error = OpenVR.Input.GetDigitalActionData(inputAction.handle, ref data, size, inputSourceHandle);
-            DebugLog(error, $"handle: {inputAction.handle}, error");
             var action = ((Action<InputDigitalActionData_t, ulong>)inputAction.action);
             if (data.bActive && data.bChanged) action.Invoke(data, inputSourceHandle);
+            return DebugLog(error, $"handle: {inputAction.handle}, error");
         }
         #endregion
 
@@ -443,8 +445,7 @@ namespace BOLL7708
             // Stereo is default and supported by every scene application, will not show notification.
             // This also means you have to be running a scene application for a screenshot to be saved.
             var error = OpenVR.Screenshots.TakeStereoScreenshot(ref handle, timestamp, $"{timestamp}_vr");
-            DebugLog(error);
-            return error == EVRScreenshotError.None;
+            return DebugLog(error);
         }
         #endregion
 
@@ -470,8 +471,7 @@ namespace BOLL7708
             ulong handle = 0;
             var key = Guid.NewGuid().ToString();
             error = OpenVR.Overlay.CreateOverlay(key, notificationTitle, ref handle);
-            if (error == EVROverlayError.None) return handle;
-            else DebugLog(error);
+            if (DebugLog(error)) return handle;
             return 0;
         }
 
@@ -502,21 +502,24 @@ namespace BOLL7708
         /*
          * Used to dismiss a persistent notification.
          */
-        public void DismissNotification(uint id)
+        public bool DismissNotification(uint id, out EVRNotificationError error)
         {
-            var error = OpenVR.Notifications.RemoveNotification(id);
-            if(!DebugLog(error)) _notifications.Remove(id);
+            error = OpenVR.Notifications.RemoveNotification(id);
+            if(error == EVRNotificationError.OK) _notifications.Remove(id);
+            return DebugLog(error);
         }
 
-        public void EmptyNotificationsQueue()
+        public bool EmptyNotificationsQueue()
         {
             var error = EVRNotificationError.OK;
+            var success = true;
             foreach (uint id in _notifications)
             {
                 error = OpenVR.Notifications.RemoveNotification(id);
-                DebugLog(error);
+                success = DebugLog(error);
             }
             _notifications.Clear();
+            return success;
         }
         #endregion
 
@@ -548,11 +551,10 @@ namespace BOLL7708
          * Pretty sure this is required to show up in the input bindings interface
          * OBS: Make sure the encoding is UTF8 and not UTF8+BOM
          */
-        public EVRApplicationError LoadAppManifest(string relativePath)
+        public bool LoadAppManifest(string relativePath)
         {
             var error = OpenVR.Applications.AddApplicationManifest(Path.GetFullPath(relativePath), false);
-            DebugLog(error);
-            return error;
+            return DebugLog(error);
         }
 
         /**
@@ -587,7 +589,9 @@ namespace BOLL7708
                 var st = new StackTrace();
                 var sf = st.GetFrame(1);
                 var methodName = sf.GetMethod().Name;
-                Debug.WriteLine($"{methodName}: {message}");
+                var text = $"{methodName}: {message}";
+                _debugLogAction?.Invoke(text);
+                Debug.WriteLine(text);
             }
         }
         private bool DebugLog(Enum e, string message = "error")
@@ -598,8 +602,13 @@ namespace BOLL7708
             {
                 var st = new StackTrace();
                 var sf = st.GetFrame(1);
-                var methodName = sf.GetMethod().Name;              
-                if(!ok) Debug.WriteLine($"{methodName} {message}: {Enum.GetName(e.GetType(), e)}");
+                var methodName = sf.GetMethod().Name;
+                var text = $"{methodName} {message}: {Enum.GetName(e.GetType(), e)}";
+                if (!ok)
+                {
+                    _debugLogAction?.Invoke(text);
+                    Debug.WriteLine(text);
+                }
             }
             return ok;
         }
@@ -610,7 +619,9 @@ namespace BOLL7708
                 var st = new StackTrace();
                 var sf = st.GetFrame(1);
                 var methodName = sf.GetMethod().Name;
-                Debug.WriteLine($"{methodName} {message}: {e.Message}");
+                var text = $"{methodName} {message}: {e.Message}";
+                _debugLogAction?.Invoke(text);
+                Debug.WriteLine(text);
             }
         }
         #endregion
