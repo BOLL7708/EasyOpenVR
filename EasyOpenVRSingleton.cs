@@ -247,7 +247,7 @@ namespace BOLL7708
 
         public void TriggerHapticPulseInController(ETrackedControllerRole role)
         {
-            var index = GetIndexForControllerRole(ETrackedControllerRole.LeftHand);
+            var index = GetIndexForControllerRole(role);
             OpenVR.System.TriggerHapticPulse(index, 0, 10000); // This works: https://github.com/ValveSoftware/openvr/wiki/IVRSystem::TriggerHapticPulse
         }
         #endregion
@@ -417,7 +417,7 @@ namespace BOLL7708
             var data = (InputAnalogActionData_t)inputAction.data;
             var error = OpenVR.Input.GetAnalogActionData(inputAction.handle, ref data, size, inputSourceHandle);
             var action = ((Action<InputAnalogActionData_t, ulong>)inputAction.action);
-            if (data.bActive) action.Invoke(data, inputSourceHandle);
+            action.Invoke(data, inputSourceHandle);
             return DebugLog(error, $"handle: {inputAction.handle}, error");
         }
 
@@ -427,7 +427,7 @@ namespace BOLL7708
             var data = (InputDigitalActionData_t) inputAction.data;
             var error = OpenVR.Input.GetDigitalActionData(inputAction.handle, ref data, size, inputSourceHandle);
             var action = ((Action<InputDigitalActionData_t, ulong>)inputAction.action);
-            if (data.bActive && data.bChanged) action.Invoke(data, inputSourceHandle);
+            if (data.bChanged) action.Invoke(data, inputSourceHandle);
             return DebugLog(error, $"handle: {inputAction.handle}, error");
         }
         #endregion
