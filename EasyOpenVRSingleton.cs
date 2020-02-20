@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -289,6 +290,56 @@ namespace BOLL7708
         #endregion
 
         #region input
+
+        /**
+         * From the SteamVR Unity Plugin: https://github.com/ValveSoftware/steamvr_unity_plugin/blob/master/Assets/SteamVR/Input/SteamVR_Input_Sources.cs
+         * Used to get the handle for any specific input source.
+         */
+        public enum InputSource
+        {
+            [Description("/unrestricted")]
+            Any,
+
+            [Description("/user/hand/left")]
+            LeftHand,
+
+            [Description("/user/hand/right")]
+            RightHand,
+
+            [Description("/user/foot/left")]
+            LeftFoot,
+
+            [Description("/user/foot/right")]
+            RightFoot,
+
+            [Description("/user/shoulder/left")]
+            LeftShoulder,
+
+            [Description("/user/shoulder/right")]
+            RightShoulder,
+
+            [Description("/user/waist")]
+            Waist,
+
+            [Description("/user/chest")]
+            Chest,
+
+            [Description("/user/head")]
+            Head,
+
+            [Description("/user/gamepad")]
+            Gamepad,
+
+            [Description("/user/camera")]
+            Camera,
+
+            [Description("/user/keyboard")]
+            Keyboard,
+
+            [Description("/user/treadmill")]
+            Treadmill,
+        }
+
         public enum InputType
         {
             Analog,
@@ -377,10 +428,17 @@ namespace BOLL7708
         /**
          * Retrieve the handle for the input source of a specific input device
          */
-        public ulong GetInputSourceHandle(string path)
+        public ulong GetInputSourceHandle(InputSource inputSource)
         {
+
+            DescriptionAttribute[] attributes = (DescriptionAttribute[])inputSource
+                .GetType()
+                .GetField(inputSource.ToString())
+                .GetCustomAttributes(typeof(DescriptionAttribute), false);
+            var source = attributes.Length > 0 ? attributes[0].Description : string.Empty;
+
             ulong handle = 0;
-            var error = OpenVR.Input.GetInputSourceHandle(path, ref handle);
+            var error = OpenVR.Input.GetInputSourceHandle(source, ref handle);
             DebugLog(error);
             return handle;
         }
