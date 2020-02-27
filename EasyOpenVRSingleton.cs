@@ -491,19 +491,158 @@ namespace BOLL7708
         #endregion
 
         #region screenshots
+        public class ScreenshotResult
+        {
+            public uint handle;
+            public EVRScreenshotType type;
+            public string filePath;
+            public string filePathVR;
+        }
 
         /*
-         * When used the files should end up in %programfiles(x86)%\Steam\steamapps\common\SteamVR\bin\
+         * Set screenshot path, if not set they will end up in: %programfiles(x86)%\Steam\steamapps\common\SteamVR\bin\
+         * Returns false if the directory does not exist.
          */
-        public bool TakeScreenshot()
+        private string _screenshotPath = "";
+        public bool SetScreenshotOutputFolder(string path)
+        {
+            var exists = Directory.Exists(path);
+            if (exists) _screenshotPath = path;
+            return exists;
+        }
+
+        /*
+         * Hooks the screenshot function so it overrides the built in screenshot shortcut in SteamVR!
+         * Listen to the VREvent_ScreenshotTriggered event to know when to acquire a screenshot.
+         */
+        public bool HookScreenshots()
+        {
+            EVRScreenshotType[] arr = { EVRScreenshotType.Stereo };
+            var error = OpenVR.Screenshots.HookScreenshot(arr);
+            return DebugLog(error);
+        }
+
+        private Tuple<string, string> GetScreenshotPaths(string prefix, string postfix, string timestampFormat = "yyyyMMdd_HHmmss_fff")
+        {
+            var sb = new StringBuilder();
+            if (_screenshotPath != string.Empty) sb.Append($"{_screenshotPath}\\");
+            if (prefix != string.Empty) sb.Append($"{prefix}_");
+            sb.Append(DateTime.Now.ToString(timestampFormat));
+            var filePath = $"{sb.ToString()}";
+            var filePathVR = $"{sb.ToString()}_{postfix}";
+            return new Tuple<string, string>(filePath, filePathVR);
+        }
+
+        /*
+         * Takes a stereo screenshot as that's supported by everything.
+         * Requires a scene application to be running.
+         */
+        public bool TakeScreenshot(
+            out ScreenshotResult screenshotResult,
+            string prefix="", 
+            string postfix="vr")
         {
             uint handle = 0;
-            var timestamp = DateTime.Now.ToString("yyyyMMddHHmmss_ffff");
-
-            // Stereo is default and supported by every scene application, will not show notification.
-            // This also means you have to be running a scene application for a screenshot to be saved.
-            var error = OpenVR.Screenshots.TakeStereoScreenshot(ref handle, timestamp, $"{timestamp}_vr");
+            var filePaths = GetScreenshotPaths(prefix, postfix);
+            var type = EVRScreenshotType.Stereo;
+            var error = OpenVR.Screenshots.TakeStereoScreenshot(ref handle, filePaths.Item1, filePaths.Item2);
+            screenshotResult = 
+                error == EVRScreenshotError.None ? 
+                new ScreenshotResult { 
+                    handle = handle, 
+                    type=type, 
+                    filePath = filePaths.Item1, 
+                    filePathVR = filePaths.Item2 
+                } : null;
             return DebugLog(error);
+        }
+
+        /*
+         * Use this to try and request other screenshot types.
+         * TODO: Had this working, but it suddenly stopped again, no idea why?!?!!??!
+         */
+        public bool RequestScreenshot(
+            out ScreenshotResult screenshotResult,
+            string prefix = "",
+            string postfix = "vr",
+            EVRScreenshotType screenshotType = EVRScreenshotType.Stereo)
+        {
+            var filePaths = GetScreenshotPaths(prefix, postfix);
+            uint handle = 0;
+            var error = OpenVR.Screenshots.RequestScreenshot(ref handle, screenshotType, $"{filePaths.Item1}.png", $"{filePaths.Item2}.png");
+            screenshotResult = 
+                error == EVRScreenshotError.None ? 
+                new ScreenshotResult { 
+                    handle = handle, 
+                    type = screenshotType, 
+                    filePath = filePaths.Item1, 
+                    filePathVR = filePaths.Item2 
+                } : null;
+            return DebugLog(error);
+        }
+
+        /*
+         * This will attempt to submit the screenshot to Steam to be in the screenshot library for the current scene application.
+         */
+        public bool SubmitScreenshotToSteam(ScreenshotResult screenshotResult)
+        {
+            var error = OpenVR.Screenshots.SubmitScreenshot(
+                screenshotResult.handle, 
+                screenshotResult.type, 
+                $"{screenshotResult.filePath}.png", 
+                $"{screenshotResult.filePathVR}.png"
+            );
+            return DebugLog(error);
+        }
+        
+        #endregion
+
+        #region video
+        public float GetRenderTargetForCurrentApp()
+        {
+            EVRSettingsError error = EVRSettingsError.None;
+            var scale = OpenVR.Settings.GetFloat(
+                OpenVR.k_pch_SteamVR_Section,
+                OpenVR.k_pch_SteamVR_SupersampleScale_Float,
+                ref error
+            );
+            Debug.WriteLine($"Render scale: {scale}");
+            return scale;
+        }
+
+        /**
+         * Will set the render scale for the current app
+         * scale 1 = 100%
+         * OBS: Will enable super sampling override if it is not enabled
+         */
+        public void SetRenderScaleForCurrentApp(float scale)
+        {
+            EVRSettingsError error = EVRSettingsError.None;
+            var enabled = OpenVR.Settings.GetBool(
+                OpenVR.k_pch_SteamVR_Section,
+                OpenVR.k_pch_SteamVR_SupersampleManualOverride_Bool,
+                ref error
+                );
+            if (_debug && error != EVRSettingsError.None) Debug.WriteLine($"Error getting setting: {Enum.GetName(typeof(EVRSettingsError), error)}");
+
+            if (!enabled)
+            {
+                OpenVR.Settings.SetBool(
+                    OpenVR.k_pch_SteamVR_Section,
+                    OpenVR.k_pch_SteamVR_SupersampleManualOverride_Bool,
+                    true,
+                    ref error
+                );
+                if (_debug && error != EVRSettingsError.None) Debug.WriteLine($"Error enabling super sampling override: {Enum.GetName(typeof(EVRSettingsError), error)}");
+            }
+
+            OpenVR.Settings.SetFloat(
+                OpenVR.k_pch_SteamVR_Section,
+                OpenVR.k_pch_SteamVR_SupersampleScale_Float,
+                scale,
+                ref error
+            );
+            if (_debug && error != EVRSettingsError.None) Debug.WriteLine($"Error setting render scale: {Enum.GetName(typeof(EVRSettingsError), error)}");
         }
         #endregion
 
