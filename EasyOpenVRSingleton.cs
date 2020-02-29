@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -254,6 +255,40 @@ namespace BOLL7708
         #endregion
 
         #region events
+        private Dictionary<EVREventType, List<Action<VREvent_t>>> _events = new Dictionary<EVREventType, List<Action<VREvent_t>>>();
+
+        ///<summary>Register an event that should trigger an action, run UpdateEvents() to get new events.</summary>
+        public void RegisterEvent(EVREventType type, Action<VREvent_t> action)
+        {
+            RegisterEvents(new EVREventType[1] { type }, action);
+        }
+        /**
+         * Register multiple events that will trigger the same action.
+         */
+        public void RegisterEvents(EVREventType[] types, Action<VREvent_t> action)
+        {
+            foreach(var t in types)
+            {
+                if (!_events.ContainsKey(t)) _events.Add(t, new List<Action<VREvent_t>>());
+                _events[t].Add(action);
+            }
+        }
+
+        /// <summary>Load new events and match them against registered events types, trigger actions.</summary>
+        public void UpdateEvents()
+        {
+            var events = GetNewEvents();
+            foreach(var e in events)
+            {
+                var type = (EVREventType)e.eventType;
+                if(_events.ContainsKey(type))
+                {
+                    foreach (var action in _events[type]) action.Invoke(e);
+                }
+            }
+        }
+
+        ///<summary>Will get all new events in the queue, note that this will cancel out triggering any registered events when running UpdateEvents().</summary>
         public VREvent_t[] GetNewEvents()
         {
             var vrEvents = new List<VREvent_t>();
@@ -273,7 +308,8 @@ namespace BOLL7708
             return vrEvents.ToArray();
         }
 
-        /*
+        /**
+         * Haven't reallly gotten into overlays, which I guess this would be used for.
          * Example of overlayHandle: OpenVR.Overlay.GetGamepadFocusOverlay() for example.
          */
         public VREvent_t[] GetNewOverlayEvents(ulong overlayHandle)
@@ -533,9 +569,10 @@ namespace BOLL7708
             return new Tuple<string, string>(filePath, filePathVR);
         }
 
-        /*
-         * Takes a stereo screenshot as that's supported by everything.
-         * Requires a scene application to be running.
+        /**
+         * Takes a stereo screenshot, works with all applications as it grabs render output directly.
+         * 
+         * OBS: Requires a scene application to be running, else screenshot functionality will stop working.
          */
         public bool TakeScreenshot(
             out ScreenshotResult screenshotResult,
@@ -557,9 +594,11 @@ namespace BOLL7708
             return DebugLog(error);
         }
 
-        /*
-         * Use this to try and request other screenshot types.
-         * TODO: Had this working, but it suddenly stopped again, no idea why?!?!!??!
+        /**
+         * Use this to request other types of screenshots.
+         * 
+         * OBS: This will NOT WORK if you have hooked the system screenshot function, 
+         * it will seemingly leave a screenshot request in limbo preventing future screenshots.
          */
         public bool RequestScreenshot(
             out ScreenshotResult screenshotResult,
@@ -569,7 +608,7 @@ namespace BOLL7708
         {
             var filePaths = GetScreenshotPaths(prefix, postfix);
             uint handle = 0;
-            var error = OpenVR.Screenshots.RequestScreenshot(ref handle, screenshotType, $"{filePaths.Item1}.png", $"{filePaths.Item2}.png");
+            var error = OpenVR.Screenshots.RequestScreenshot(ref handle, screenshotType, filePaths.Item1, filePaths.Item2);
             screenshotResult = 
                 error == EVRScreenshotError.None ? 
                 new ScreenshotResult { 
