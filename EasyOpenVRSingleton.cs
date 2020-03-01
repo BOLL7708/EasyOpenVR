@@ -275,16 +275,17 @@ namespace BOLL7708
         }
 
         /// <summary>Load new events and match them against registered events types, trigger actions.</summary>
-        public void UpdateEvents()
+        public void UpdateEvents(bool debugUnhandledEvents=false)
         {
             var events = GetNewEvents();
             foreach(var e in events)
             {
                 var type = (EVREventType)e.eventType;
-                if(_events.ContainsKey(type))
+                if (_events.ContainsKey(type))
                 {
                     foreach (var action in _events[type]) action.Invoke(e);
                 }
+                else if (debugUnhandledEvents) DebugLog((EVREventType) e.eventType, "Unhandled event");
             }
         }
 
@@ -302,14 +303,14 @@ namespace BOLL7708
                 }
             } catch(Exception e)
             {
-                if (_debug) Debug.WriteLine($"Could not get new events: {e.StackTrace}");
+                DebugLog(e, "Could not get new events");
             }
             
             return vrEvents.ToArray();
         }
 
         /**
-         * Haven't reallly gotten into overlays, which I guess this would be used for.
+         * Haven't really gotten into overlays, which I guess this would be used for.
          * Example of overlayHandle: OpenVR.Overlay.GetGamepadFocusOverlay() for example.
          */
         public VREvent_t[] GetNewOverlayEvents(ulong overlayHandle)
@@ -886,14 +887,15 @@ namespace BOLL7708
 
         public static class BitmapUtils
         {
-            public static NotificationBitmap_t NotificationBitmapFromBitmap(Bitmap bmp)
+            public static NotificationBitmap_t NotificationBitmapFromBitmap(Bitmap bmp, bool flipRnB=false)
             {
-                return NotificationBitmapFromBitmapData(BitmapDataFromBitmap(bmp));
+                return NotificationBitmapFromBitmapData(BitmapDataFromBitmap(bmp, flipRnB));
             }
 
-            public static BitmapData BitmapDataFromBitmap(Bitmap bmpIn)
+            public static BitmapData BitmapDataFromBitmap(Bitmap bmpIn, bool flipRnB=false)
             {
                 Bitmap bmp = (Bitmap)bmpIn.Clone();
+                if (flipRnB) RGBtoBGR(bmp);
                 BitmapData texData = bmp.LockBits(
                     new Rectangle(0, 0, bmp.Width, bmp.Height),
                     ImageLockMode.ReadOnly,
@@ -910,6 +912,27 @@ namespace BOLL7708
                 notification_icon.m_nHeight = TextureData.Height;
                 notification_icon.m_nBytesPerPixel = 4;
                 return notification_icon;
+            }
+
+            private static void RGBtoBGR(Bitmap bmp)
+            {
+                // based on https://docs.microsoft.com/en-us/dotnet/api/system.drawing.bitmap.unlockbits?view=netframework-4.8
+
+                int bytesPerPixel = Bitmap.GetPixelFormatSize(bmp.PixelFormat) / 8;
+                BitmapData data = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height), ImageLockMode.ReadWrite, bmp.PixelFormat);
+                int bytes = Math.Abs(data.Stride) * bmp.Height;
+
+                IntPtr ptr = data.Scan0;
+                var rgbValues = new byte[bytes];
+                Marshal.Copy(data.Scan0, rgbValues, 0, bytes);
+                for (int i = 0; i < bytes; i += bytesPerPixel)
+                {
+                    byte dummy = rgbValues[i];
+                    rgbValues[i] = rgbValues[i + 2];
+                    rgbValues[i + 2] = dummy;
+                }
+                Marshal.Copy(rgbValues, 0, ptr, bytes);
+                bmp.UnlockBits(data);
             }
         }
 
