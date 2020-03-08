@@ -79,14 +79,14 @@ namespace BOLL7708
         public Compositor_CumulativeStats GetCumulativeStats()
         {
             Compositor_CumulativeStats stats = new Compositor_CumulativeStats();
-            OpenVR.Compositor.GetCumulativeStats(ref stats, (uint) Marshal.SizeOf(stats));
+            OpenVR.Compositor.GetCumulativeStats(ref stats, (uint)Marshal.SizeOf(stats));
             return stats;
         }
 
         public Compositor_FrameTiming GetFrameTiming()
         {
             Compositor_FrameTiming timing = new Compositor_FrameTiming();
-            timing.m_nSize = (uint) Marshal.SizeOf(timing);
+            timing.m_nSize = (uint)Marshal.SizeOf(timing);
             var success = OpenVR.Compositor.GetFrameTiming(ref timing, 0);
             if (!success) DebugLog("Could not get frame timing.");
             return timing;
@@ -185,7 +185,7 @@ namespace BOLL7708
         public VRControllerState_t GetControllerState(uint index)
         {
             VRControllerState_t state = new VRControllerState_t();
-            var success = OpenVR.System.GetControllerState(index, ref state, (uint) Marshal.SizeOf(state));
+            var success = OpenVR.System.GetControllerState(index, ref state, (uint)Marshal.SizeOf(state));
             if (!success) DebugLog("Failure getting ControllerState");
             return state;
         }
@@ -267,7 +267,7 @@ namespace BOLL7708
          */
         public void RegisterEvents(EVREventType[] types, Action<VREvent_t> action)
         {
-            foreach(var t in types)
+            foreach (var t in types)
             {
                 if (!_events.ContainsKey(t)) _events.Add(t, new List<Action<VREvent_t>>());
                 _events[t].Add(action);
@@ -275,17 +275,17 @@ namespace BOLL7708
         }
 
         /// <summary>Load new events and match them against registered events types, trigger actions.</summary>
-        public void UpdateEvents(bool debugUnhandledEvents=false)
+        public void UpdateEvents(bool debugUnhandledEvents = false)
         {
             var events = GetNewEvents();
-            foreach(var e in events)
+            foreach (var e in events)
             {
                 var type = (EVREventType)e.eventType;
                 if (_events.ContainsKey(type))
                 {
                     foreach (var action in _events[type]) action.Invoke(e);
                 }
-                else if (debugUnhandledEvents) DebugLog((EVREventType) e.eventType, "Unhandled event");
+                else if (debugUnhandledEvents) DebugLog((EVREventType)e.eventType, "Unhandled event");
             }
         }
 
@@ -294,34 +294,18 @@ namespace BOLL7708
         {
             var vrEvents = new List<VREvent_t>();
             var vrEvent = new VREvent_t();
-            uint eventSize = (uint) Marshal.SizeOf(vrEvent);
+            uint eventSize = (uint)Marshal.SizeOf(vrEvent);
             try
             {
                 while (OpenVR.System.PollNextEvent(ref vrEvent, eventSize))
                 {
                     vrEvents.Add(vrEvent);
                 }
-            } catch(Exception e)
+            } catch (Exception e)
             {
                 DebugLog(e, "Could not get new events");
             }
-            
-            return vrEvents.ToArray();
-        }
 
-        /**
-         * Haven't really gotten into overlays, which I guess this would be used for.
-         * Example of overlayHandle: OpenVR.Overlay.GetGamepadFocusOverlay() for example.
-         */
-        public VREvent_t[] GetNewOverlayEvents(ulong overlayHandle)
-        {
-            var vrEvents = new List<VREvent_t>();
-            var vrEvent = new VREvent_t();
-            uint eventSize = (uint) Marshal.SizeOf(vrEvent);
-            while (OpenVR.Overlay.PollNextOverlayEvent(overlayHandle, ref vrEvent, eventSize))
-            {
-                vrEvents.Add(vrEvent);
-            }
             return vrEvents.ToArray();
         }
         #endregion
@@ -389,7 +373,7 @@ namespace BOLL7708
             public InputType type;
             public object action;
         }
-        
+
         private List<InputAction> _inputActions = new List<InputAction>();
         private List<VRActiveActionSet_t> _inputActionSets = new List<VRActiveActionSet_t>();
 
@@ -479,7 +463,7 @@ namespace BOLL7708
             DebugLog(error);
             return handle;
         }
-        
+
 
         /**
          * Update all action states, this will trigger stored actions if needed.
@@ -490,13 +474,13 @@ namespace BOLL7708
         {
             if (inputSourceHandles == null) inputSourceHandles = new ulong[] { OpenVR.k_ulInvalidInputValueHandle };
             var error = OpenVR.Input.UpdateActionState(_inputActionSets.ToArray(), (uint)Marshal.SizeOf(typeof(VRActiveActionSet_t)));
- 
+
             _inputActions.ForEach((InputAction action) =>
             {
-                switch(action.type)
+                switch (action.type)
                 {
                     case InputType.Analog:
-                        foreach(var handle in inputSourceHandles) GetAnalogAction(action, handle);
+                        foreach (var handle in inputSourceHandles) GetAnalogAction(action, handle);
                         break;
                     case InputType.Digital:
                         foreach (var handle in inputSourceHandles) GetDigitalAction(action, handle);
@@ -519,7 +503,7 @@ namespace BOLL7708
         private bool GetDigitalAction(InputAction inputAction, ulong inputSourceHandle)
         {
             var size = (uint)Marshal.SizeOf(typeof(InputDigitalActionData_t));
-            var data = (InputDigitalActionData_t) inputAction.data;
+            var data = (InputDigitalActionData_t)inputAction.data;
             var error = OpenVR.Input.GetDigitalActionData(inputAction.handle, ref data, size, inputSourceHandle);
             var action = ((Action<InputDigitalActionData_t, ulong>)inputAction.action);
             if (data.bChanged) action.Invoke(data, inputSourceHandle);
@@ -577,20 +561,20 @@ namespace BOLL7708
          */
         public bool TakeScreenshot(
             out ScreenshotResult screenshotResult,
-            string prefix="", 
-            string postfix="vr")
+            string prefix = "",
+            string postfix = "vr")
         {
             uint handle = 0;
             var filePaths = GetScreenshotPaths(prefix, postfix);
             var type = EVRScreenshotType.Stereo;
             var error = OpenVR.Screenshots.TakeStereoScreenshot(ref handle, filePaths.Item1, filePaths.Item2);
-            screenshotResult = 
-                error == EVRScreenshotError.None ? 
-                new ScreenshotResult { 
-                    handle = handle, 
-                    type=type, 
-                    filePath = filePaths.Item1, 
-                    filePathVR = filePaths.Item2 
+            screenshotResult =
+                error == EVRScreenshotError.None ?
+                new ScreenshotResult {
+                    handle = handle,
+                    type = type,
+                    filePath = filePaths.Item1,
+                    filePathVR = filePaths.Item2
                 } : null;
             return DebugLog(error);
         }
@@ -610,13 +594,13 @@ namespace BOLL7708
             var filePaths = GetScreenshotPaths(prefix, postfix);
             uint handle = 0;
             var error = OpenVR.Screenshots.RequestScreenshot(ref handle, screenshotType, filePaths.Item1, filePaths.Item2);
-            screenshotResult = 
-                error == EVRScreenshotError.None ? 
-                new ScreenshotResult { 
-                    handle = handle, 
-                    type = screenshotType, 
-                    filePath = filePaths.Item1, 
-                    filePathVR = filePaths.Item2 
+            screenshotResult =
+                error == EVRScreenshotError.None ?
+                new ScreenshotResult {
+                    handle = handle,
+                    type = screenshotType,
+                    filePath = filePaths.Item1,
+                    filePathVR = filePaths.Item2
                 } : null;
             return DebugLog(error);
         }
@@ -627,14 +611,14 @@ namespace BOLL7708
         public bool SubmitScreenshotToSteam(ScreenshotResult screenshotResult)
         {
             var error = OpenVR.Screenshots.SubmitScreenshot(
-                screenshotResult.handle, 
-                screenshotResult.type, 
-                $"{screenshotResult.filePath}.png", 
+                screenshotResult.handle,
+                screenshotResult.type,
+                $"{screenshotResult.filePath}.png",
                 $"{screenshotResult.filePathVR}.png"
             );
             return DebugLog(error);
         }
-        
+
         #endregion
 
         #region video
@@ -742,7 +726,7 @@ namespace BOLL7708
         public bool DismissNotification(uint id, out EVRNotificationError error)
         {
             error = OpenVR.Notifications.RemoveNotification(id);
-            if(error == EVRNotificationError.OK) _notifications.Remove(id);
+            if (error == EVRNotificationError.OK) _notifications.Remove(id);
             return DebugLog(error);
         }
 
@@ -757,6 +741,85 @@ namespace BOLL7708
             }
             _notifications.Clear();
             return success;
+        }
+        #endregion
+
+        #region overlays
+        /// <summary>
+        /// Creates an overlay that will show up in the headset if you draw to it
+        /// </summary>
+        /// <param name="uniqueKey"></param>
+        /// <param name="title"></param>
+        /// <param name="transform">Get an empty transform from Utils.GetEmptyTransform</param>
+        /// <param name="width">Default is 1, height is derived from the texture aspect ratio and the width</param>
+        /// <param name="anchor">Default is none, else index for which tracked device to attach overlay to</param>
+        /// <param name="origin">If we have no anchor, we need an origin to set position, defaults to standing</param>
+        /// <returns>0 if we failed to create an overlay</returns>
+        public ulong CreateOverlay(string uniqueKey, string title, HmdMatrix34_t transform, float width = 1, uint anchor=uint.MaxValue, ETrackingUniverseOrigin origin = ETrackingUniverseOrigin.TrackingUniverseStanding)
+        {
+            ulong handle = 0;
+            var error = OpenVR.Overlay.CreateOverlay(uniqueKey, title, ref handle);
+            if(error == EVROverlayError.None)
+            {
+                OpenVR.Overlay.SetOverlayWidthInMeters(handle, width);
+                if (anchor != uint.MaxValue) OpenVR.Overlay.SetOverlayTransformTrackedDeviceRelative(handle, anchor, ref transform);
+                else OpenVR.Overlay.SetOverlayTransformAbsolute(handle, origin, ref transform);
+            }
+            DebugLog(error);
+            return handle;
+        }
+
+        public bool SetOverlayTextureFromFile(ulong handle, string path)
+        {
+            var error = OpenVR.Overlay.SetOverlayFromFile(handle, path);
+            return DebugLog(error);
+        }
+
+        /// <summary>
+        /// Preliminiary as I have yet to figure out how to make my own textures at runtime.
+        /// </summary>
+        /// <param name="handle"></param>
+        /// <param name="texture"></param>
+        /// <returns></returns>
+        public bool SetOverlayTexture(ulong handle, ref Texture_t texture)
+        {
+            var error = OpenVR.Overlay.SetOverlayTexture(handle, ref texture);
+            return DebugLog(error);
+        }
+
+        public HmdMatrix34_t GetOverlayTransform(ulong handle, ETrackingUniverseOrigin origin = ETrackingUniverseOrigin.TrackingUniverseStanding)
+        {
+            var transform = new HmdMatrix34_t();
+            var error = OpenVR.Overlay.GetOverlayTransformAbsolute(handle, ref origin, ref transform);
+            DebugLog(error);
+            return transform;
+        }
+        
+        public bool SetOverlayVisibility(ulong handle, bool visible)
+        {
+            EVROverlayError error;
+            if (visible) error = OpenVR.Overlay.ShowOverlay(handle);
+            else error = OpenVR.Overlay.HideOverlay(handle);
+            return DebugLog(error);
+        }
+        
+        /**
+         * Will have to explore this at a later date, right now my overlays are non-interactive.
+         */
+        public VREvent_t[] GetNewOverlayEvents(ulong overlayHandle)
+        {
+            var vrEvents = new List<VREvent_t>();
+            var vrEvent = new VREvent_t();
+            uint eventSize = (uint)Marshal.SizeOf(vrEvent);
+            while (OpenVR.Overlay.PollNextOverlayEvent(overlayHandle, ref vrEvent, eventSize))
+            {
+                vrEvents.Add(vrEvent);
+            }
+            return vrEvents.ToArray();
+        }
+        static public bool RegisterOverlay()
+        {
+            return false;
         }
         #endregion
 
@@ -867,6 +930,15 @@ namespace BOLL7708
 
         public static class Utils
         {
+            public static HmdMatrix34_t GetEmptyTransform()
+            {
+                var transform = new HmdMatrix34_t();
+                transform.m0 = 1;
+                transform.m5 = 1;
+                transform.m10 = 1;
+                return transform;
+            }
+
             public static HmdVector3_t InvertVector(HmdVector3_t position)
             {
                 position.v0 = -position.v0;
