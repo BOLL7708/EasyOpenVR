@@ -181,6 +181,7 @@ namespace BOLL7708
         #region controller
         /*
          * Includes things like analogue axes of triggers, pads & sticks
+         * OBS: Deprecated
          */
         public VRControllerState_t GetControllerState(uint index)
         {
@@ -202,10 +203,29 @@ namespace BOLL7708
         #endregion
 
         #region tracked_device
-        /*
-         * Example of property: ETrackedDeviceProperty.Prop_DeviceBatteryPercentage_Float
-         */
-        public float GetFloatTrackedDeviceProperty(uint index, ETrackedDeviceProperty property)
+        public uint[] GetIndexesForTrackedDeviceClass(ETrackedDeviceClass _class)
+        {
+            // Not sure how this one works, no ref? Skip for now.
+            // var result = new uint[OpenVR.k_unMaxTrackedDeviceCount];
+            // var count = OpenVR.System.GetSortedTrackedDeviceIndicesOfClass(_class, result, uint.MaxValue);
+            
+            var result = new List<uint>();
+            for (uint i = 0; i < OpenVR.k_unMaxTrackedDeviceCount; i++)
+            {
+                if (GetTrackedDeviceClass(i) == _class) result.Add(i);
+            }
+            return result.ToArray();
+        }
+
+        public ETrackedDeviceClass GetTrackedDeviceClass(uint index)
+        {
+            return OpenVR.System.GetTrackedDeviceClass(index);
+        }
+
+    /*
+     * Example of property: ETrackedDeviceProperty.Prop_DeviceBatteryPercentage_Float
+     */
+    public float GetFloatTrackedDeviceProperty(uint index, ETrackedDeviceProperty property)
         {
             var error = new ETrackedPropertyError();
             var result = OpenVR.System.GetFloatTrackedDeviceProperty(index, property, ref error);
@@ -247,6 +267,7 @@ namespace BOLL7708
             return result;
         }
 
+        // TODO: This has apparently been deprecated, figure out how to do it with the new input system.
         public void TriggerHapticPulseInController(ETrackedControllerRole role)
         {
             var index = GetIndexForControllerRole(role);
@@ -817,9 +838,12 @@ namespace BOLL7708
             }
             return vrEvents.ToArray();
         }
-        static public bool RegisterOverlay()
+        public ulong FindOverlay(string uniqueKey)
         {
-            return false;
+            ulong handle = 0;
+            var error = OpenVR.Overlay.FindOverlay(uniqueKey, ref handle);
+            DebugLog(error);
+            return handle;
         }
         #endregion
 
@@ -840,6 +864,8 @@ namespace BOLL7708
         {
             OpenVR.Shutdown();
             _initState = 0;
+            _events = new Dictionary<EVREventType, List<Action<VREvent_t>>>();
+            _inputActions = new List<InputAction>();
         }
 
         #endregion
