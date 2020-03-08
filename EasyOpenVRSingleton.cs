@@ -808,6 +808,19 @@ namespace BOLL7708
             return DebugLog(error);
         }
 
+        /// <summary>
+        /// Sets raw overlay pixels from Bitmap, appears to crash íf going above 1mpix or near that.
+        /// </summary>
+        /// <param name="handle"></param>
+        /// <param name="bmp"></param>
+        public void SetOverlayPixels(ulong handle, Bitmap bmp)
+        {
+            BitmapUtils.PointerFromBitmap(bmp, true, (pointer) => {
+                int bytesPerPixel = Bitmap.GetPixelFormatSize(bmp.PixelFormat) / 8;
+                var error = OpenVR.Overlay.SetOverlayRaw(handle, pointer, (uint) bmp.Width, (uint) bmp.Height, (uint) bytesPerPixel);
+            });
+        }
+
         public HmdMatrix34_t GetOverlayTransform(ulong handle, ETrackingUniverseOrigin origin = ETrackingUniverseOrigin.TrackingUniverseStanding)
         {
             var transform = new HmdMatrix34_t();
@@ -1010,6 +1023,16 @@ namespace BOLL7708
                 notification_icon.m_nHeight = TextureData.Height;
                 notification_icon.m_nBytesPerPixel = 4;
                 return notification_icon;
+            }
+
+            public static void PointerFromBitmap(Bitmap bmpIn, bool flipRnB, Action<IntPtr> action)
+            {
+                Bitmap bmp = (Bitmap)bmpIn.Clone();
+                if (flipRnB) RGBtoBGR(bmp);
+                BitmapData data = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height), ImageLockMode.ReadWrite, bmp.PixelFormat);
+                IntPtr pointer = data.Scan0;
+                action.Invoke(pointer);
+                bmp.UnlockBits(data);
             }
 
             private static void RGBtoBGR(Bitmap bmp)
