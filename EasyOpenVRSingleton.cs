@@ -655,12 +655,7 @@ namespace BOLL7708
             return scale;
         }
 
-        /**
-         * Will set the render scale for the current app
-         * scale 1 = 100%
-         * OBS: Will enable super sampling override if it is not enabled
-         */
-        public void SetRenderScaleForCurrentApp(float scale)
+        public bool GetSuperSamplingEnabledForCurrentApp()
         {
             EVRSettingsError error = EVRSettingsError.None;
             var enabled = OpenVR.Settings.GetBool(
@@ -668,26 +663,49 @@ namespace BOLL7708
                 OpenVR.k_pch_SteamVR_SupersampleManualOverride_Bool,
                 ref error
                 );
-            if (_debug && error != EVRSettingsError.None) Debug.WriteLine($"Error getting setting: {Enum.GetName(typeof(EVRSettingsError), error)}");
+            DebugLog(error);
+            return enabled;
+        }
 
-            if (!enabled)
-            {
-                OpenVR.Settings.SetBool(
-                    OpenVR.k_pch_SteamVR_Section,
-                    OpenVR.k_pch_SteamVR_SupersampleManualOverride_Bool,
-                    true,
-                    ref error
-                );
-                if (_debug && error != EVRSettingsError.None) Debug.WriteLine($"Error enabling super sampling override: {Enum.GetName(typeof(EVRSettingsError), error)}");
-            }
+        public bool SetSuperSamplingEnabledForCurrentApp(bool enabled)
+        {
+            EVRSettingsError error = EVRSettingsError.None;
+            OpenVR.Settings.SetBool(
+                OpenVR.k_pch_SteamVR_Section,
+                OpenVR.k_pch_SteamVR_SupersampleManualOverride_Bool,
+                enabled,
+                ref error
+            );
+            return DebugLog(error);
+        }
 
+        public float GetSuperSamplingForCurrentApp()
+        {
+            EVRSettingsError error = EVRSettingsError.None;
+            var scale = OpenVR.Settings.GetFloat(
+                OpenVR.k_pch_SteamVR_Section,
+                OpenVR.k_pch_SteamVR_SupersampleScale_Float,
+                ref error
+            );
+            DebugLog(error);
+            return scale;
+        }
+
+        /**
+         * Will set the render scale for the current app
+         * scale 1 = 100%
+         * OBS: Will enable super sampling override if it is not enabled
+         */
+        public bool SetSuperSamplingForCurrentApp(float scale)
+        {
+            EVRSettingsError error = EVRSettingsError.None;
             OpenVR.Settings.SetFloat(
                 OpenVR.k_pch_SteamVR_Section,
                 OpenVR.k_pch_SteamVR_SupersampleScale_Float,
                 scale,
                 ref error
             );
-            if (_debug && error != EVRSettingsError.None) Debug.WriteLine($"Error setting render scale: {Enum.GetName(typeof(EVRSettingsError), error)}");
+            return DebugLog(error);
         }
         #endregion
 
