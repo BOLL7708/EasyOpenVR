@@ -942,6 +942,32 @@ namespace BOLL7708
             return DebugLog(error);
         }
 
+        public bool RemoveAppManifest(string relativePath)
+        {
+            var error = OpenVR.Applications.RemoveApplicationManifest(Path.GetFullPath(relativePath));
+            return DebugLog(error);
+        }
+        
+        /// <summary>
+        /// Will add the application to the auto launch list in SteamVR
+        /// OBS: Does require for a matching app manifest to have been loaded
+        /// OBS2: Still not quite sure how to get this to actually work.
+        /// </summary>
+        /// <param name="appKey">Same app key as you have in the app manifest</param>
+        /// <returns></returns>
+        public bool RegisterForAutoLaunch(string appKey, bool autoLaunch=true)
+        {
+            if(OpenVR.Applications.IsApplicationInstalled(appKey))
+            {
+                var error = OpenVR.Applications.SetApplicationAutoLaunch(appKey, autoLaunch);
+                return DebugLog(error);
+            } else
+            {
+                Debug.WriteLine("Application is not installed.");
+            }
+            return true;
+        }
+
         /**
          * Will return the application ID for the currently running scene application.
          * Will return an empty string is there is no result.
