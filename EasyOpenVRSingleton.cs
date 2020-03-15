@@ -808,6 +808,14 @@ namespace BOLL7708
             return handle;
         }
 
+        public bool SetOverlayTransform(ulong handle, HmdMatrix34_t transform, uint anchor = uint.MaxValue, ETrackingUniverseOrigin origin = ETrackingUniverseOrigin.TrackingUniverseStanding)
+        {
+            EVROverlayError error;
+            if (anchor != uint.MaxValue) error = OpenVR.Overlay.SetOverlayTransformTrackedDeviceRelative(handle, anchor, ref transform);
+            else error = OpenVR.Overlay.SetOverlayTransformAbsolute(handle, origin, ref transform);
+            return DebugLog(error);
+        }
+
         public bool SetOverlayTextureFromFile(ulong handle, string path)
         {
             var error = OpenVR.Overlay.SetOverlayFromFile(handle, path);
@@ -822,12 +830,14 @@ namespace BOLL7708
         /// <returns></returns>
         public bool SetOverlayTexture(ulong handle, ref Texture_t texture)
         {
+            // DXGI_FORMAT_R8G8B8A8_UNORM 
             var error = OpenVR.Overlay.SetOverlayTexture(handle, ref texture);
             return DebugLog(error);
         }
 
         /// <summary>
         /// Sets raw overlay pixels from Bitmap, appears to crash íf going above 1mpix or near that.
+        /// It's also said to be super inefficient by Valve themselves, so never use this for frequently updating overlays.
         /// </summary>
         /// <param name="handle"></param>
         /// <param name="bmp"></param>
@@ -875,6 +885,24 @@ namespace BOLL7708
             var error = OpenVR.Overlay.FindOverlay(uniqueKey, ref handle);
             DebugLog(error);
             return handle;
+        }
+
+        public class OverlayTextureSize
+        {
+            public uint width;
+            public uint height;
+            public float aspectRatio;
+        }
+
+        public OverlayTextureSize GetOverlayTextureSize(ulong handle)
+        {
+            uint width = 0;
+            uint height = 0;
+            var error = OpenVR.Overlay.GetOverlayTextureSize(handle, ref width, ref height);
+            DebugLog(error);
+            return (width == 0 || height == 0) ? 
+                new OverlayTextureSize() : 
+                new OverlayTextureSize { width=width, height=height, aspectRatio=(float)width/(float)height };
         }
         #endregion
 
