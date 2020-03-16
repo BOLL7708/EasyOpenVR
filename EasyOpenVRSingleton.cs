@@ -1038,6 +1038,12 @@ namespace BOLL7708
         #endregion
 
         #region utils
+        public class YPR
+        {
+            public double yaw;
+            public double pitch;
+            public double roll;
+        }
 
         public static class Utils
         {
@@ -1050,6 +1056,30 @@ namespace BOLL7708
                 return transform;
             }
 
+            public static HmdMatrix34_t GetTransformFromEuler(YPR e)
+            {
+                // Assuming the angles are in radians.
+                var ch = (float) Math.Cos(e.yaw);
+                var sh = (float) Math.Sin(e.yaw);
+                var ca = (float) Math.Cos(e.pitch);
+                var sa = (float) Math.Sin(e.pitch);
+                var cb = (float) Math.Cos(e.roll);
+                var sb = (float) Math.Sin(e.roll);
+
+                return new HmdMatrix34_t
+                {
+                    m0 = ch * ca,
+                    m1 = sh * sb - ch * sa * cb,
+                    m2 = ch * sa * sb + sh * cb,
+                    m4 = sa,
+                    m5 = ca * cb,
+                    m6 = -ca * sb,
+                    m8 = -sh * ca,
+                    m9 = sh * sa * cb + ch * sb,
+                    m10 = -sh * sa * sb + ch * cb
+                };
+            }
+
             public static HmdVector3_t InvertVector(HmdVector3_t position)
             {
                 position.v0 = -position.v0;
@@ -1060,11 +1090,57 @@ namespace BOLL7708
 
             public static HmdVector3_t MultiplyVectorWithRotationMatrix(HmdVector3_t v, HmdMatrix34_t m)
             {
-                var newVector = new HmdVector3_t();
-                newVector.v0 = m.m0 * v.v0 + m.m1 * v.v1 + m.m2 * v.v2;
-                newVector.v1 = m.m4 * v.v0 + m.m5 * v.v1 + m.m6 * v.v2;
-                newVector.v2 = m.m8 * v.v0 + m.m9 * v.v1 + m.m10 * v.v2;
-                return newVector;
+                return new HmdVector3_t
+                {
+                    v0 = m.m0 * v.v0 + m.m1 * v.v1 + m.m2 * v.v2,
+                    v1 = m.m4 * v.v0 + m.m5 * v.v1 + m.m6 * v.v2,
+                    v2 = m.m8 * v.v0 + m.m9 * v.v1 + m.m10 * v.v2
+                };
+            }
+
+            public static HmdQuaternion_t QuaternionFromMatrix(HmdMatrix34_t m)
+            {
+                var w = Math.Sqrt(1 + m.m0 + m.m5 + m.m10) / 2.0;
+                return new HmdQuaternion_t
+                {
+                    w = w, // Scalar
+                    x = (m.m9 - m.m6) / (4 * w),
+                    y = (m.m2 - m.m8) / (4 * w),
+                    z = (m.m4 - m.m1) / (4 * w)
+                };
+            }
+
+            public static YPR RotationMatrixToYPR(HmdMatrix34_t m)
+            {
+                var q = QuaternionFromMatrix(m);
+                double test = q.x * q.y + q.z * q.w;
+                if (test > 0.499)
+                { // singularity at north pole
+                    return new YPR
+                    {
+                        yaw = 2 * Math.Atan2(q.x, q.w), // heading
+                        pitch = Math.PI / 2, // attitude
+                        roll = 0 // bank
+                    };
+                }
+                if (test < -0.499)
+                { // singularity at south pole
+                    return new YPR
+                    {
+                        yaw = -2 * Math.Atan2(q.x, q.w), // headingq
+                        pitch = -Math.PI / 2, // attitude
+                        roll = 0 // bank
+                    };
+                }
+                double sqx = q.x * q.x;
+                double sqy = q.y * q.y;
+                double sqz = q.z * q.z;
+                return new YPR
+                {
+                    yaw = Math.Atan2(2 * q.y * q.w - 2 * q.x * q.z, 1 - 2 * sqy - 2 * sqz), // heading
+                    pitch = Math.Asin(2 * test), // attitude
+                    roll = Math.Atan2(2 * q.x * q.w - 2 * q.y * q.z, 1 - 2 * sqx - 2 * sqz) // bank
+                };
             }
         }
 
