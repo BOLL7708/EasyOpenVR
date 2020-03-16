@@ -1059,12 +1059,13 @@ namespace BOLL7708
             public static HmdMatrix34_t GetTransformFromEuler(YPR e)
             {
                 // Assuming the angles are in radians.
+                // Had to switch roll and pitch here to match SteamVR
                 var ch = (float) Math.Cos(e.yaw);
                 var sh = (float) Math.Sin(e.yaw);
-                var ca = (float) Math.Cos(e.pitch);
-                var sa = (float) Math.Sin(e.pitch);
-                var cb = (float) Math.Cos(e.roll);
-                var sb = (float) Math.Sin(e.roll);
+                var ca = (float) Math.Cos(e.roll);
+                var sa = (float) Math.Sin(e.roll);
+                var cb = (float) Math.Cos(e.pitch);
+                var sb = (float) Math.Sin(e.pitch);
 
                 return new HmdMatrix34_t
                 {
@@ -1112,6 +1113,7 @@ namespace BOLL7708
 
             public static YPR RotationMatrixToYPR(HmdMatrix34_t m)
             {
+                // Had to switch roll and pitch here to match SteamVR
                 var q = QuaternionFromMatrix(m);
                 double test = q.x * q.y + q.z * q.w;
                 if (test > 0.499)
@@ -1119,8 +1121,8 @@ namespace BOLL7708
                     return new YPR
                     {
                         yaw = 2 * Math.Atan2(q.x, q.w), // heading
-                        pitch = Math.PI / 2, // attitude
-                        roll = 0 // bank
+                        roll = Math.PI / 2, // attitude
+                        pitch = 0 // bank
                     };
                 }
                 if (test < -0.499)
@@ -1128,8 +1130,8 @@ namespace BOLL7708
                     return new YPR
                     {
                         yaw = -2 * Math.Atan2(q.x, q.w), // headingq
-                        pitch = -Math.PI / 2, // attitude
-                        roll = 0 // bank
+                        roll = -Math.PI / 2, // attitude
+                        pitch = 0 // bank
                     };
                 }
                 double sqx = q.x * q.x;
@@ -1138,8 +1140,8 @@ namespace BOLL7708
                 return new YPR
                 {
                     yaw = Math.Atan2(2 * q.y * q.w - 2 * q.x * q.z, 1 - 2 * sqy - 2 * sqz), // heading
-                    pitch = Math.Asin(2 * test), // attitude
-                    roll = Math.Atan2(2 * q.x * q.w - 2 * q.y * q.z, 1 - 2 * sqx - 2 * sqz) // bank
+                    roll = Math.Asin(2 * test), // attitude
+                    pitch = Math.Atan2(2 * q.x * q.w - 2 * q.y * q.z, 1 - 2 * sqx - 2 * sqz) // bank
                 };
             }
         }
