@@ -856,6 +856,24 @@ namespace BOLL7708
             DebugLog(error);
             return transform;
         }
+
+        /// <summary>
+        /// Sets the alpha of the overlay
+        /// </summary>
+        /// <param name="handle"></param>
+        /// <param name="alpha">Normalized 0.0-1.0</param>
+        /// <returns></returns>
+        public bool SetOverlayAlpha(ulong handle, float alpha)
+        {
+            var error = OpenVR.Overlay.SetOverlayAlpha(handle, alpha);
+            return DebugLog(error);
+        }
+
+        public bool SetOverlayWidth(ulong handle, float width)
+        {
+            var error = OpenVR.Overlay.SetOverlayWidthInMeters(handle, width);
+            return DebugLog(error);
+        }
         
         public bool SetOverlayVisibility(ulong handle, bool visible)
         {
