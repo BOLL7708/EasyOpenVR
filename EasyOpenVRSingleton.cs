@@ -1166,7 +1166,14 @@ namespace BOLL7708
 
         public static class BitmapUtils
         {
-            public static NotificationBitmap_t NotificationBitmapFromBitmap(Bitmap bmp, bool flipRnB=false)
+            /// <summary>
+            /// Generate the needed bitmap for SteamVR notifications
+            /// By default we flip red and blue image channels as that seems to always be required for it to display properly
+            /// </summary>
+            /// <param name="bmp">The system bitmap</param>
+            /// <param name="flipRnB">Whether we should flip red and blue channels or not</param>
+            /// <returns></returns>
+            public static NotificationBitmap_t NotificationBitmapFromBitmap(Bitmap bmp, bool flipRnB=true)
             {
                 return NotificationBitmapFromBitmapData(BitmapDataFromBitmap(bmp, flipRnB));
             }
