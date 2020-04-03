@@ -91,6 +91,14 @@ namespace BOLL7708
             if (!success) DebugLog("Could not get frame timing.");
             return timing;
         }
+
+        public Compositor_FrameTiming[] GetFrameTimings(uint count)
+        {
+            Compositor_FrameTiming[] timings = new Compositor_FrameTiming[count];
+            var resultCount = OpenVR.Compositor.GetFrameTimings(timings);
+            if (resultCount == 0) DebugLog("Could not get frame timings.");
+            return timings;
+        }
         #endregion
 
         #region tracking
