@@ -230,10 +230,10 @@ namespace BOLL7708
             return OpenVR.System.GetTrackedDeviceClass(index);
         }
 
-    /*
-     * Example of property: ETrackedDeviceProperty.Prop_DeviceBatteryPercentage_Float
-     */
-    public float GetFloatTrackedDeviceProperty(uint index, ETrackedDeviceProperty property)
+        /*
+         * Example of property: ETrackedDeviceProperty.Prop_DeviceBatteryPercentage_Float
+         */
+        public float GetFloatTrackedDeviceProperty(uint index, ETrackedDeviceProperty property)
         {
             var error = new ETrackedPropertyError();
             var result = OpenVR.System.GetFloatTrackedDeviceProperty(index, property, ref error);
@@ -260,6 +260,17 @@ namespace BOLL7708
         {
             var error = new ETrackedPropertyError();
             var result = OpenVR.System.GetInt32TrackedDeviceProperty(index, property, ref error);
+            DebugLog(error);
+            return result;
+        }
+
+        /*
+         * Example of property: ETrackedDeviceProperty.Prop_CurrentUniverseId_Uint64
+         */
+        public ulong GetLongTrackedDeviceProperty(uint index, ETrackedDeviceProperty property)
+        {
+            var error = new ETrackedPropertyError();
+            var result = OpenVR.System.GetUint64TrackedDeviceProperty(index, property, ref error);
             DebugLog(error);
             return result;
         }
