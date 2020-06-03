@@ -404,14 +404,36 @@ namespace BOLL7708
         public enum InputType
         {
             Analog,
-            Digital
+            Digital,
+            Pose
         }
         private class InputAction
         {
+            internal string path;
+            internal object data;
+            internal InputType type;
+            internal object action;
+            internal ulong handle = 0;
+            internal string pathEnd = "";
+
+            internal InputActionInfo getInfo(ulong sourceHandle)
+            {
+                return new InputActionInfo
+                {
+                    handle = handle,
+                    path = path,
+                    pathEnd = pathEnd,
+                    sourceHandle = sourceHandle
+                };
+            }
+        }
+
+        public class InputActionInfo
+        {
             public ulong handle;
-            public object data;
-            public InputType type;
-            public object action;
+            public string path;
+            public string pathEnd;
+            public ulong sourceHandle;
         }
 
         private List<InputAction> _inputActions = new List<InputAction>();
@@ -443,13 +465,15 @@ namespace BOLL7708
             return DebugLog(error);
         }
 
-        private EVRInputError RegisterAction(string path, ref InputAction ia)
+        private EVRInputError RegisterAction(ref InputAction ia)
         {
             ulong handle = 0;
-            var error = OpenVR.Input.GetActionHandle(path, ref handle);
+            var error = OpenVR.Input.GetActionHandle(ia.path, ref handle);
+            var pathParts = ia.path.Split('/');
             if (handle != 0 && error == EVRInputError.None)
             {
                 ia.handle = handle;
+                ia.pathEnd = pathParts[pathParts.Length - 1];
                 _inputActions.Add(ia);
             }
             else DebugLog(error);
@@ -459,30 +483,48 @@ namespace BOLL7708
         /**
          * Register an analog action with a callback action
          */
-        public bool RegisterAnalogAction(string path, Action<InputAnalogActionData_t, ulong> action)
+        public bool RegisterAnalogAction(string path, Action<InputAnalogActionData_t, InputActionInfo> action)
         {
             var ia = new InputAction
             {
+                path = path,
                 type = InputType.Analog,
                 action = action,
                 data = new InputAnalogActionData_t()
             };
-            var error = RegisterAction(path, ref ia);
+            var error = RegisterAction(ref ia);
             return DebugLog(error);
         }
 
         /**
          * Register a digital action with a callback action
          */
-        public bool RegisterDigitalAction(string path, Action<InputDigitalActionData_t, ulong> action)
+        public bool RegisterDigitalAction(string path, Action<InputDigitalActionData_t, InputActionInfo> action)
         {
             var inputAction = new InputAction
             {
+                path = path,
                 type = InputType.Digital,
                 action = action,
                 data = new InputDigitalActionData_t()
             };
-            var error = RegisterAction(path, ref inputAction);
+            var error = RegisterAction(ref inputAction);
+            return DebugLog(error);
+        }
+
+        /**
+         * Register a digital action with a callback action
+         */
+        public bool RegisterPoseAction(string path, Action<InputPoseActionData_t, InputActionInfo> action)
+        {
+            var inputAction = new InputAction
+            {
+                path = path,
+                type = InputType.Pose,
+                action = action,
+                data = new InputPoseActionData_t()
+            };
+            var error = RegisterAction(ref inputAction);
             return DebugLog(error);
         }
 
@@ -525,6 +567,9 @@ namespace BOLL7708
                     case InputType.Digital:
                         foreach (var handle in inputSourceHandles) GetDigitalAction(action, handle);
                         break;
+                    case InputType.Pose:
+                        foreach (var handle in inputSourceHandles) GetPoseAction(action, handle);
+                        break;
                 }
             });
             return DebugLog(error);
@@ -535,8 +580,8 @@ namespace BOLL7708
             var size = (uint)Marshal.SizeOf(typeof(InputAnalogActionData_t));
             var data = (InputAnalogActionData_t)inputAction.data;
             var error = OpenVR.Input.GetAnalogActionData(inputAction.handle, ref data, size, inputSourceHandle);
-            var action = ((Action<InputAnalogActionData_t, ulong>)inputAction.action);
-            action.Invoke(data, inputSourceHandle);
+            var action = ((Action<InputAnalogActionData_t, InputActionInfo>)inputAction.action);
+            if(data.bActive) action.Invoke(data, inputAction.getInfo(inputSourceHandle));
             return DebugLog(error, $"handle: {inputAction.handle}, error");
         }
 
@@ -545,8 +590,18 @@ namespace BOLL7708
             var size = (uint)Marshal.SizeOf(typeof(InputDigitalActionData_t));
             var data = (InputDigitalActionData_t)inputAction.data;
             var error = OpenVR.Input.GetDigitalActionData(inputAction.handle, ref data, size, inputSourceHandle);
-            var action = ((Action<InputDigitalActionData_t, ulong>)inputAction.action);
-            if (data.bChanged) action.Invoke(data, inputSourceHandle);
+            var action = ((Action<InputDigitalActionData_t, InputActionInfo>)inputAction.action);
+            if (data.bActive && data.bChanged) action.Invoke(data, inputAction.getInfo(inputSourceHandle));
+            return DebugLog(error, $"handle: {inputAction.handle}, error");
+        }
+
+        private bool GetPoseAction(InputAction inputAction, ulong inputSourceHandle)
+        {
+            var size = (uint)Marshal.SizeOf(typeof(InputPoseActionData_t));
+            var data = (InputPoseActionData_t)inputAction.data;
+            var error = OpenVR.Input.GetPoseActionDataRelativeToNow(inputAction.handle, ETrackingUniverseOrigin.TrackingUniverseStanding, 0f, ref data, size, inputSourceHandle);
+            var action = ((Action<InputPoseActionData_t, InputActionInfo>)inputAction.action);
+            if (data.bActive) action.Invoke(data, inputAction.getInfo(inputSourceHandle));
             return DebugLog(error, $"handle: {inputAction.handle}, error");
         }
         #endregion
