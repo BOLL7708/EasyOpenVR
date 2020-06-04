@@ -202,7 +202,7 @@ namespace BOLL7708
         /**
          * Will return the index of the role if found
          * Useful if you want to know which controller is right or left.
-         * Note: Seems redundant now, but wasn't in the past, I think.
+         * Note: Will eventually be removed as it has now been deprecated.
          */
         public uint GetIndexForControllerRole(ETrackedControllerRole role)
         {
@@ -216,7 +216,6 @@ namespace BOLL7708
             // Not sure how this one works, no ref? Skip for now.
             // var result = new uint[OpenVR.k_unMaxTrackedDeviceCount];
             // var count = OpenVR.System.GetSortedTrackedDeviceIndicesOfClass(_class, result, uint.MaxValue);
-            
             var result = new List<uint>();
             for (uint i = 0; i < OpenVR.k_unMaxTrackedDeviceCount; i++)
             {
@@ -292,6 +291,13 @@ namespace BOLL7708
             var index = GetIndexForControllerRole(role);
             OpenVR.System.TriggerHapticPulse(index, 0, 10000); // This works: https://github.com/ValveSoftware/openvr/wiki/IVRSystem::TriggerHapticPulse
         }
+
+        public InputOriginInfo_t GetOriginTrackedDeviceInfo(ulong originHandle) {
+            var info = new InputOriginInfo_t();
+            var error = OpenVR.Input.GetOriginTrackedDeviceInfo(originHandle, ref info, (uint)Marshal.SizeOf(info));
+            DebugLog(error);
+            return info;
+        }
         #endregion
 
         #region events
@@ -361,43 +367,45 @@ namespace BOLL7708
             [Description("/unrestricted")]
             Any,
 
-            [Description("/user/hand/left")]
+            [Description(OpenVR.k_pchPathUserHandLeft)]
             LeftHand,
-
-            [Description("/user/hand/right")]
-            RightHand,
-
-            [Description("/user/foot/left")]
+            [Description(OpenVR.k_pchPathUserElbowLeft)]
+            LeftElbow,
+            [Description(OpenVR.k_pchPathUserShoulderLeft)]
+            LeftShoulder,
+            [Description(OpenVR.k_pchPathUserKneeLeft)]
+            LeftKnee,
+            [Description(OpenVR.k_pchPathUserFootLeft)]
             LeftFoot,
 
-            [Description("/user/foot/right")]
+            [Description(OpenVR.k_pchPathUserHandRight)]
+            RightHand,
+            [Description(OpenVR.k_pchPathUserElbowRight)]
+            RightElbow,
+            [Description(OpenVR.k_pchPathUserShoulderRight)]
+            RightShoulder,
+            [Description(OpenVR.k_pchPathUserKneeRight)]
+            RightKnee,
+            [Description(OpenVR.k_pchPathUserFootRight)]
             RightFoot,
 
-            [Description("/user/shoulder/left")]
-            LeftShoulder,
-
-            [Description("/user/shoulder/right")]
-            RightShoulder,
-
-            [Description("/user/waist")]
+            [Description(OpenVR.k_pchPathUserHead)]
+            Head,
+            [Description(OpenVR.k_pchPathUserChest)]
+            Chest,
+            [Description(OpenVR.k_pchPathUserWaist)]
             Waist,
 
-            [Description("/user/chest")]
-            Chest,
-
-            [Description("/user/head")]
-            Head,
-
-            [Description("/user/gamepad")]
+            [Description(OpenVR.k_pchPathUserGamepad)]
             Gamepad,
-
-            [Description("/user/camera")]
-            Camera,
-
-            [Description("/user/keyboard")]
+            [Description(OpenVR.k_pchPathUserStylus)]
+            Stylus,
+            [Description(OpenVR.k_pchPathUserKeyboard)]
             Keyboard,
 
-            [Description("/user/treadmill")]
+            [Description(OpenVR.k_pchPathUserCamera)]
+            Camera,
+            [Description(OpenVR.k_pchPathUserTreadmill)]
             Treadmill,
         }
 
