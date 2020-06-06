@@ -865,6 +865,26 @@ namespace BOLL7708
         }
         #endregion
 
+        #region Settings
+        /// <summary>
+        ///  Fetches a settings value from the SteamVR settings
+        /// </summary>
+        /// <param name="section">Example: OpenVR.k_pch_CollisionBounds_Section</param>
+        /// <param name="setting">Example: OpenVR.k_pch_SteamVR_SupersampleScale_Float</param>
+        /// <returns>float value</returns>
+        public float GetFloatSetting(string section, string setting) {
+            EVRSettingsError error = EVRSettingsError.None;
+            var value = OpenVR.Settings.GetFloat(
+                section,
+                setting,
+                ref error
+            );
+            DebugLog(error);
+            return value;
+        }
+
+        #endregion
+
         #region overlays
         /// <summary>
         /// Creates an overlay that will show up in the headset if you draw to it
