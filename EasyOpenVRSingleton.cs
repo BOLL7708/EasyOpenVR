@@ -883,6 +883,12 @@ namespace BOLL7708
             return value;
         }
 
+        public bool SetFloatSetting(string section, string setting, float value) {
+            EVRSettingsError error = EVRSettingsError.None;
+            OpenVR.Settings.SetFloat(section, setting, value, ref error);
+            return DebugLog(error);
+        }
+
         #endregion
 
         #region overlays
