@@ -562,7 +562,7 @@ namespace BOLL7708
          */
         public bool UpdateActionStates(ulong[] inputSourceHandles = null)
         {
-            if (inputSourceHandles == null) inputSourceHandles = new ulong[] { OpenVR.k_ulInvalidInputValueHandle };
+            if (inputSourceHandles == null) inputSourceHandles = new ulong[] { OpenVR.k_ulInvalidPathHandle };
             var error = OpenVR.Input.UpdateActionState(_inputActionSets.ToArray(), (uint)Marshal.SizeOf(typeof(VRActiveActionSet_t)));
 
             _inputActions.ForEach((InputAction action) =>
@@ -1073,27 +1073,29 @@ namespace BOLL7708
             var error = OpenVR.Applications.RemoveApplicationManifest(Path.GetFullPath(relativePath));
             return DebugLog(error);
         }
-        
-        /// <summary>
-        /// Will add the application to the auto launch list in SteamVR
-        /// OBS: Does require for a matching app manifest to have been loaded
-        /// OBS2: Still not quite sure how to get this to actually work.
-        /// </summary>
-        /// <param name="appKey">Same app key as you have in the app manifest</param>
-        /// <returns></returns>
-        public bool RegisterForAutoLaunch(string appKey, bool autoLaunch=true)
-        {
-            if(OpenVR.Applications.IsApplicationInstalled(appKey))
-            {
-                var error = OpenVR.Applications.SetApplicationAutoLaunch(appKey, autoLaunch);
-                return DebugLog(error);
-            } else
-            {
-                Debug.WriteLine("Application is not installed.");
-            }
-            return true;
-        }
 
+        /// <summary>
+        /// Will add the application manifest and optionally register for auto launch.
+        /// OBS: For auto launch to work the manifest must include "is_dashboard_overlay": true.
+        /// </summary>
+        /// <param name="relativeManifestPath">The relative path to your application manifest</param>
+        /// <param name="applicationKey">Application key, used to check if already installed.</param>
+        /// <param name="alsoRegisterAutoLaunch">Optional flag to register for auto launch.</param>
+        /// <returns></returns>
+        public bool AddApplicationManifest(string relativeManifestPath, string applicationKey, bool alsoRegisterAutoLaunch=false) {
+            if (!OpenVR.Applications.IsApplicationInstalled(applicationKey))
+            {
+                var manifestError = OpenVR.Applications.AddApplicationManifest(Path.GetFullPath(relativeManifestPath), false);
+                if(manifestError == EVRApplicationError.None && alsoRegisterAutoLaunch)
+                {
+                    var autolaunchError = OpenVR.Applications.SetApplicationAutoLaunch(applicationKey, true);
+                    return DebugLog(autolaunchError);
+                }
+                return DebugLog(manifestError);
+            }
+            return false;
+        }
+        
         /**
          * Will return the application ID for the currently running scene application.
          * Will return an empty string is there is no result.
@@ -1131,21 +1133,18 @@ namespace BOLL7708
                 Debug.WriteLine(text);
             }
         }
-        private bool DebugLog(Enum e, string message = "error")
+        private bool DebugLog(Enum errorEnum, string message = "error")
         {
-            var errorVal = Convert.ChangeType(e, e.GetTypeCode());
+            var errorVal = Convert.ChangeType(errorEnum, errorEnum.GetTypeCode());
             var ok = (int)errorVal == 0;
-            if (_debug)
+            if (_debug && !ok)
             {
-                var st = new StackTrace();
-                var sf = st.GetFrame(1);
-                var methodName = sf.GetMethod().Name;
-                var text = $"{methodName} {message}: {Enum.GetName(e.GetType(), e)}";
-                if (!ok)
-                {
-                    _debugLogAction?.Invoke(text);
-                    Debug.WriteLine(text);
-                }
+                var stackTrace = new StackTrace();
+                var stackFrame = stackTrace.GetFrame(1);
+                var methodName = stackFrame.GetMethod().Name;
+                var text = $"{methodName} {message}: {Enum.GetName(errorEnum.GetType(), errorEnum)}";
+                _debugLogAction?.Invoke(text);
+                Debug.WriteLine(text);
             }
             return ok;
         }
