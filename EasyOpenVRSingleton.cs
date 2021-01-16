@@ -236,7 +236,7 @@ namespace BOLL7708
         {
             var error = new ETrackedPropertyError();
             var result = OpenVR.System.GetFloatTrackedDeviceProperty(index, property, ref error);
-            DebugLog(error);
+            DebugLog(error, property);
             return result;
         }
         /*
@@ -1148,6 +1148,23 @@ namespace BOLL7708
             }
             return ok;
         }
+
+        private bool DebugLog(Enum errorEnum, Enum valueEnum)
+        {
+            var errorVal = Convert.ChangeType(errorEnum, errorEnum.GetTypeCode());
+            var ok = (int)errorVal == 0;
+            if (_debug && !ok)
+            {
+                var stackTrace = new StackTrace();
+                var stackFrame = stackTrace.GetFrame(1);
+                var methodName = stackFrame.GetMethod().Name;
+                var text = $"{methodName} {Enum.GetName(valueEnum.GetType(), valueEnum)}: {Enum.GetName(errorEnum.GetType(), errorEnum)}";
+                _debugLogAction?.Invoke(text);
+                Debug.WriteLine(text);
+            }
+            return ok;
+        }
+
         private void DebugLog(Exception e, string message = "error")
         {
             if (_debug)
