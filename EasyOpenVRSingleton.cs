@@ -809,10 +809,9 @@ namespace BOLL7708
          */
         public ulong InitNotificationOverlay(string notificationTitle)
         {
-            var error = EVROverlayError.None;
             ulong handle = 0;
             var key = Guid.NewGuid().ToString();
-            error = OpenVR.Overlay.CreateOverlay(key, notificationTitle, ref handle);
+            var error = OpenVR.Overlay.CreateOverlay(key, notificationTitle, ref handle);
             if (DebugLog(error)) return handle;
             return 0;
         }
