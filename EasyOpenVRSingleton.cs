@@ -1240,6 +1240,14 @@ namespace BOLL7708
                 };
             }
 
+            public static HmdMatrix34_t AddVectorToMatrix(HmdMatrix34_t m, HmdVector3_t v) {
+                var v2 = MultiplyVectorWithRotationMatrix(v, m);
+                m.m3 += v2.v0;
+                m.m7 += v2.v1;
+                m.m11 += v2.v2;
+                return m;
+            }
+
             public static HmdQuaternion_t QuaternionFromMatrix(HmdMatrix34_t m)
             {
                 var w = Math.Sqrt(1 + m.m0 + m.m5 + m.m10) / 2.0;
