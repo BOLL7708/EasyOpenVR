@@ -1421,4 +1421,37 @@ namespace BOLL7708
 
         #endregion
     }
+
+    public static class Extensions
+    {
+        public static HmdMatrix34_t Translate(this HmdMatrix34_t mat, HmdVector3_t v)
+        {
+            var translationMatrix = new HmdMatrix34_t
+            {
+                m0 = 1,
+                m5 = 1,
+                m10 = 1,
+                m3 = v.v0,
+                m7 = v.v1,
+                m11 = v.v2
+            };
+
+            return EasyOpenVRSingleton.Utils.MultiplyMatrixWithMatrix(mat, translationMatrix);
+        }
+        
+        public static HmdMatrix34_t Translate(this HmdMatrix34_t mat, float x, float y, float z)
+        {
+            var translationMatrix = new HmdMatrix34_t
+            {
+                m0 = 1,
+                m5 = 1,
+                m10 = 1,
+                m3 = x,
+                m7 = y,
+                m11 = z
+            };
+
+            return EasyOpenVRSingleton.Utils.MultiplyMatrixWithMatrix(mat, translationMatrix);
+        }
+    }
 }
