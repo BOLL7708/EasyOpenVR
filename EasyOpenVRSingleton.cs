@@ -1248,6 +1248,38 @@ namespace BOLL7708
                 return m;
             }
 
+            public static HmdMatrix34_t MultiplyMatrixWithMatrix(HmdMatrix34_t matA, HmdMatrix34_t matB)
+            {
+                return new HmdMatrix34_t
+                {
+                    // Row 0
+                    m0 = matA.m0 * matB.m0 + matA.m1 * matB.m4 + matA.m2 * matB.m8,
+                    m1 = matA.m0 * matB.m1 + matA.m1 * matB.m5 + matA.m2 * matB.m9,
+                    m2 = matA.m0 * matB.m2 + matA.m1 * matB.m6 + matA.m2 * matB.m10,
+                    m3 = matA.m0 * matB.m3 + matA.m1 * matB.m7 + matA.m2 * matB.m11 + matA.m3,
+                    
+                    // Row 1
+                    m4 = matA.m4 * matB.m0 + matA.m5 * matB.m4 + matA.m6 * matB.m8,
+                    m5 = matA.m4 * matB.m1 + matA.m5 * matB.m5 + matA.m6 * matB.m9,
+                    m6 = matA.m4 * matB.m2 + matA.m5 * matB.m6 + matA.m6 * matB.m10,
+                    m7 = matA.m4 * matB.m3 + matA.m5 * matB.m7 + matA.m6 * matB.m11 + matA.m7,
+                        
+                    // Row 2
+                    m8 = matA.m8 * matB.m0 + matA.m9 * matB.m4 + matA.m10 * matB.m8,
+                    m9 = matA.m8 * matB.m1 + matA.m9 * matB.m5 + matA.m10 * matB.m9,
+                    m10 = matA.m8 * matB.m2 + matA.m9 * matB.m6 + matA.m10 * matB.m10,
+                    m11 = matA.m8 * matB.m3 + matA.m9 * matB.m7 + matA.m10 * matB.m11 + matA.m11,
+                };
+            }
+
+            // Dunno if you like having this here, but it helped me with debugging.
+            public static string MatToString(HmdMatrix34_t mat)
+            {
+                return $"[{mat.m0}, {mat.m1}, {mat.m2}, {mat.m3},\n" +
+                       $"{mat.m4}, {mat.m5}, {mat.m6}, {mat.m7},\n" +
+                       $"{mat.m8}, {mat.m9}, {mat.m10}, {mat.m11}]";
+            }
+
             public static HmdQuaternion_t QuaternionFromMatrix(HmdMatrix34_t m)
             {
                 var w = Math.Sqrt(1 + m.m0 + m.m5 + m.m10) / 2.0;
