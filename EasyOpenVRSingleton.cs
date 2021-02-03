@@ -1424,6 +1424,8 @@ namespace BOLL7708
 
     public static class Extensions
     {
+        #region Translation
+        
         public static HmdMatrix34_t Translate(this HmdMatrix34_t mat, HmdVector3_t v)
         {
             var translationMatrix = new HmdMatrix34_t
@@ -1436,22 +1438,28 @@ namespace BOLL7708
                 m11 = v.v2
             };
 
-            return EasyOpenVRSingleton.Utils.MultiplyMatrixWithMatrix(mat, translationMatrix);
+            return mat.Multiply(translationMatrix);
         }
         
         public static HmdMatrix34_t Translate(this HmdMatrix34_t mat, float x, float y, float z)
         {
-            var translationMatrix = new HmdMatrix34_t
+            var translationVector = new HmdVector3_t
             {
-                m0 = 1,
-                m5 = 1,
-                m10 = 1,
-                m3 = x,
-                m7 = y,
-                m11 = z
+                v0 = x,
+                v1 = y,
+                v2 = z
             };
 
-            return EasyOpenVRSingleton.Utils.MultiplyMatrixWithMatrix(mat, translationMatrix);
+            return mat.Translate(translationVector);
         }
+        
+        #endregion
+
+        #region Multiplication
+
+        public static HmdMatrix34_t Multiply(this HmdMatrix34_t matA, HmdMatrix34_t matB) =>
+            EasyOpenVRSingleton.Utils.MultiplyMatrixWithMatrix(matA, matB);
+
+        #endregion
     }
 }
