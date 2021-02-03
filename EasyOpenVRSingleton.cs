@@ -1455,10 +1455,110 @@ namespace BOLL7708
         
         #endregion
 
+        #region Rotation
+
+        private static HmdMatrix34_t RotationX(double angle, bool degrees = true)
+        {
+            if (degrees) angle = (Math.PI * angle / 180.0);
+            return new HmdMatrix34_t
+            {
+                m0 = 1,
+                m5 = (float)Math.Cos(angle),
+                m6 = (float)-Math.Sin(angle),
+                m9 = (float)Math.Sin(angle),
+                m10 = (float)Math.Cos(angle),
+            };
+        }
+        private static HmdMatrix34_t RotationY(double angle, bool degrees = true)
+        {
+            if (degrees) angle = (Math.PI * angle / 180.0);
+            return new HmdMatrix34_t
+            {
+                m0 = (float)Math.Cos(angle),
+                m2 = (float)Math.Sin(angle),
+                m5 = 1,
+                m8 = (float)-Math.Sin(angle),
+                m10 = (float)Math.Cos(angle),
+            };
+        }
+        private static HmdMatrix34_t RotationZ(double angle, bool degrees = true)
+        {
+            if (degrees) angle = (Math.PI * angle / 180.0);
+            return new HmdMatrix34_t
+            {
+                m0 = (float)Math.Cos(angle),
+                m1 = (float)-Math.Sin(angle),
+                m4 = (float)Math.Sin(angle),
+                m5 = (float)Math.Cos(angle),
+                m10 = 1,
+            };
+        }
+
+        public static HmdMatrix34_t RotateX(this HmdMatrix34_t mat, double angle, bool degrees = true)
+        {
+            return mat.Multiply(RotationX(angle, degrees));
+        }
+        public static HmdMatrix34_t RotateY(this HmdMatrix34_t mat, double angle, bool degrees = true)
+        {
+            return mat.Multiply(RotationY(angle, degrees));
+        }
+        public static HmdMatrix34_t RotateZ(this HmdMatrix34_t mat, double angle, bool degrees = true)
+        {
+            return mat.Multiply(RotationZ(angle, degrees));
+        }
+
+        public static HmdMatrix34_t Rotate(this HmdMatrix34_t mat, double angleX, double angleY, double angleZ, bool degrees = true)
+        {
+            // HmdMatrix34_t rotation = mat.RotateX(angleX, degrees);
+            // rotation = rotation.RotateY(angleY, degrees);
+            // rotation = rotation.RotateZ(angleZ, degrees);
+            return mat.RotateX(angleX, degrees).RotateY(angleY, degrees).RotateZ(angleZ, degrees);
+        }
+
+        #endregion
+
         #region Multiplication
 
         public static HmdMatrix34_t Multiply(this HmdMatrix34_t matA, HmdMatrix34_t matB) =>
             EasyOpenVRSingleton.Utils.MultiplyMatrixWithMatrix(matA, matB);
+
+        public static HmdMatrix34_t Multiply(this HmdMatrix34_t mat, float val)
+        {
+            return new HmdMatrix34_t
+            {
+                m0 = mat.m0 * val, m1 = mat.m1 * val, m2 = mat.m2 * val, m3 = mat.m3 * val,
+                m4 = mat.m4 * val, m5 = mat.m5 * val, m6 = mat.m6 * val, m7 = mat.m7 * val,
+                m8 = mat.m8 * val, m9 = mat.m9 * val, m10 = mat.m10 * val, m11 = mat.m11 * val
+            };
+        }
+
+        #endregion
+
+        #region Interpolation
+
+        public static HmdMatrix34_t Lerp(this HmdMatrix34_t matA, HmdMatrix34_t matB, float amount)
+        {
+            return new HmdMatrix34_t
+            {
+                // Row one
+                m0 = matA.m0 + (matB.m0 - matA.m0) * amount,
+                m1 = matA.m1 + (matB.m1 - matA.m1) * amount,
+                m2 = matA.m2 + (matB.m2 - matA.m2) * amount,
+                m3 = matA.m3 + (matB.m3 - matA.m3) * amount,
+                
+                // Row two
+                m4 = matA.m4 + (matB.m4 - matA.m4) * amount,
+                m5 = matA.m5 + (matB.m5 - matA.m5) * amount,
+                m6 = matA.m6 + (matB.m6 - matA.m6) * amount,
+                m7 = matA.m7 + (matB.m7 - matA.m7) * amount,
+                
+                // Row three
+                m8 = matA.m8 + (matB.m8 - matA.m8) * amount,
+                m9 = matA.m9 + (matB.m9 - matA.m9) * amount,
+                m10 = matA.m10 + (matB.m10 - matA.m10) * amount,
+                m11 = matA.m11 + (matB.m11 - matA.m11) * amount,
+            };
+        }
 
         #endregion
     }
