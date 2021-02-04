@@ -1429,8 +1429,8 @@ namespace BOLL7708
         public static HmdMatrix34_t Translate(this HmdMatrix34_t mat, HmdVector3_t v, bool localAxis = true)
         {
             if (!localAxis) return mat.Add(v);
-
-                var translationMatrix = new HmdMatrix34_t
+            
+            var translationMatrix = new HmdMatrix34_t
             {
                 m0 = 1,
                 m5 = 1,
