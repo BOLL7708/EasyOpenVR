@@ -1426,9 +1426,11 @@ namespace BOLL7708
     {
         #region Translation
         
-        public static HmdMatrix34_t Translate(this HmdMatrix34_t mat, HmdVector3_t v)
+        public static HmdMatrix34_t Translate(this HmdMatrix34_t mat, HmdVector3_t v, bool localAxis = true)
         {
-            var translationMatrix = new HmdMatrix34_t
+            if (!localAxis) return mat.Add(v);
+
+                var translationMatrix = new HmdMatrix34_t
             {
                 m0 = 1,
                 m5 = 1,
@@ -1441,7 +1443,7 @@ namespace BOLL7708
             return mat.Multiply(translationMatrix);
         }
         
-        public static HmdMatrix34_t Translate(this HmdMatrix34_t mat, float x, float y, float z)
+        public static HmdMatrix34_t Translate(this HmdMatrix34_t mat, float x, float y, float z, bool localAxis = true)
         {
             var translationVector = new HmdVector3_t
             {
@@ -1450,7 +1452,7 @@ namespace BOLL7708
                 v2 = z
             };
 
-            return mat.Translate(translationVector);
+            return mat.Translate(translationVector, localAxis);
         }
         
         #endregion
@@ -1530,6 +1532,50 @@ namespace BOLL7708
                 m4 = mat.m4 * val, m5 = mat.m5 * val, m6 = mat.m6 * val, m7 = mat.m7 * val,
                 m8 = mat.m8 * val, m9 = mat.m9 * val, m10 = mat.m10 * val, m11 = mat.m11 * val
             };
+        }
+
+        #endregion
+
+        #region Addition
+
+        public static HmdMatrix34_t Add(this HmdMatrix34_t matA, HmdMatrix34_t matB)
+        {
+            return new HmdMatrix34_t
+            {
+                m0 = matA.m0 + matB.m0, m1 = matA.m1 + matB.m1, m2 = matA.m2 + matB.m2, m3 = matA.m3 + matB.m3,
+                m4 = matA.m4 + matB.m4, m5 = matA.m5 + matB.m5, m6 = matA.m6 + matB.m6, m7 = matA.m7 + matB.m7,
+                m8 = matA.m8 + matB.m8, m9 = matA.m9 + matB.m9, m10 = matA.m10 + matB.m10, m11 = matA.m11 + matB.m11,
+            };
+        }
+
+        public static HmdMatrix34_t Add(this HmdMatrix34_t mat, HmdVector3_t vec)
+        {
+            mat.m3 += vec.v0;
+            mat.m7 += vec.v1;
+            mat.m11 += vec.v2;
+            return mat;
+        }
+
+        #endregion
+
+        #region Subtraction
+
+        public static HmdMatrix34_t Subtract(this HmdMatrix34_t matA, HmdMatrix34_t matB)
+        {
+            return new HmdMatrix34_t
+            {
+                m0 = matA.m0 - matB.m0, m1 = matA.m1 - matB.m1, m2 = matA.m2 - matB.m2, m3 = matA.m3 - matB.m3,
+                m4 = matA.m4 - matB.m4, m5 = matA.m5 - matB.m5, m6 = matA.m6 - matB.m6, m7 = matA.m7 - matB.m7,
+                m8 = matA.m8 - matB.m8, m9 = matA.m9 - matB.m9, m10 = matA.m10 - matB.m10, m11 = matA.m11 - matB.m11,
+            };
+        }
+
+        public static HmdMatrix34_t Subtract(this HmdMatrix34_t mat, HmdVector3_t vec)
+        {
+            mat.m3 -= vec.v0;
+            mat.m7 -= vec.v1;
+            mat.m11 -= vec.v2;
+            return mat;
         }
 
         #endregion
