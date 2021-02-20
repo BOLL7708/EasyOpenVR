@@ -423,6 +423,7 @@ namespace BOLL7708
             internal object action;
             internal ulong handle = 0;
             internal string pathEnd = "";
+            internal bool isChord = false; // Needed to avoid filtering on the input source handle as Chords can flip their on/off action between sources depending on which button is activated/deactivated first.
 
             internal InputActionInfo getInfo(ulong sourceHandle)
             {
@@ -491,14 +492,15 @@ namespace BOLL7708
         /**
          * Register an analog action with a callback action
          */
-        public bool RegisterAnalogAction(string path, Action<InputAnalogActionData_t, InputActionInfo> action)
+        public bool RegisterAnalogAction(string path, Action<InputAnalogActionData_t, InputActionInfo> action, bool isChord = false)
         {
             var ia = new InputAction
             {
                 path = path,
                 type = InputType.Analog,
                 action = action,
-                data = new InputAnalogActionData_t()
+                data = new InputAnalogActionData_t(),
+                isChord = isChord
             };
             var error = RegisterAction(ref ia);
             return DebugLog(error);
@@ -507,14 +509,15 @@ namespace BOLL7708
         /**
          * Register a digital action with a callback action
          */
-        public bool RegisterDigitalAction(string path, Action<InputDigitalActionData_t, InputActionInfo> action)
+        public bool RegisterDigitalAction(string path, Action<InputDigitalActionData_t, InputActionInfo> action, bool isChord = false)
         {
             var inputAction = new InputAction
             {
                 path = path,
                 type = InputType.Digital,
                 action = action,
-                data = new InputDigitalActionData_t()
+                data = new InputDigitalActionData_t(),
+                isChord = isChord
             };
             var error = RegisterAction(ref inputAction);
             return DebugLog(error);
@@ -523,14 +526,15 @@ namespace BOLL7708
         /**
          * Register a digital action with a callback action
          */
-        public bool RegisterPoseAction(string path, Action<InputPoseActionData_t, InputActionInfo> action)
+        public bool RegisterPoseAction(string path, Action<InputPoseActionData_t, InputActionInfo> action, bool isChord = false)
         {
             var inputAction = new InputAction
             {
                 path = path,
                 type = InputType.Pose,
                 action = action,
-                data = new InputPoseActionData_t()
+                data = new InputPoseActionData_t(),
+                isChord = isChord
             };
             var error = RegisterAction(ref inputAction);
             return DebugLog(error);
@@ -585,6 +589,7 @@ namespace BOLL7708
 
         private bool GetAnalogAction(InputAction inputAction, ulong inputSourceHandle)
         {
+            if (inputAction.isChord) inputSourceHandle = 0;
             var size = (uint)Marshal.SizeOf(typeof(InputAnalogActionData_t));
             var data = (InputAnalogActionData_t)inputAction.data;
             var error = OpenVR.Input.GetAnalogActionData(inputAction.handle, ref data, size, inputSourceHandle);
@@ -595,6 +600,7 @@ namespace BOLL7708
 
         private bool GetDigitalAction(InputAction inputAction, ulong inputSourceHandle)
         {
+            if (inputAction.isChord) inputSourceHandle = 0;
             var size = (uint)Marshal.SizeOf(typeof(InputDigitalActionData_t));
             var data = (InputDigitalActionData_t)inputAction.data;
             var error = OpenVR.Input.GetDigitalActionData(inputAction.handle, ref data, size, inputSourceHandle);
@@ -605,6 +611,7 @@ namespace BOLL7708
 
         private bool GetPoseAction(InputAction inputAction, ulong inputSourceHandle)
         {
+            if (inputAction.isChord) inputSourceHandle = 0;
             var size = (uint)Marshal.SizeOf(typeof(InputPoseActionData_t));
             var data = (InputPoseActionData_t)inputAction.data;
             var error = OpenVR.Input.GetPoseActionDataRelativeToNow(inputAction.handle, ETrackingUniverseOrigin.TrackingUniverseStanding, 0f, ref data, size, inputSourceHandle);
