@@ -1614,5 +1614,44 @@ namespace BOLL7708
         }
 
         #endregion
+
+        #region Transformation
+
+        public static HmdVector3_t EulerAngles(this HmdMatrix34_t mat)
+        {
+            double yaw = Math.Atan2(mat.m2, mat.m10);
+            double pitch = -Math.Asin(mat.m6);
+            double roll = Math.Atan2(mat.m4, mat.m5);
+
+            return new HmdVector3_t
+            {
+                v1 = (float) yaw,
+                v0 = (float) pitch,
+                v2 = (float) roll
+            };
+        }
+
+        public static HmdMatrix34_t FromEuler(this HmdMatrix34_t mat, HmdVector3_t angles)
+        {
+            HmdMatrix34_t Rx = RotationX(angles.v0, false);
+            HmdMatrix34_t Ry = RotationY(angles.v1, false);
+            HmdMatrix34_t Rz = RotationZ(angles.v2, false);
+
+            HmdMatrix34_t rotation = Ry.Multiply(Rx).Multiply(Rz);
+
+            mat.m0 = rotation.m0;
+            mat.m1 = rotation.m1;
+            mat.m2 = rotation.m2;
+            mat.m4 = rotation.m4;
+            mat.m5 = rotation.m5;
+            mat.m6 = rotation.m6;
+            mat.m8 = rotation.m8;
+            mat.m9 = rotation.m9;
+            mat.m10 = rotation.m10;
+
+            return mat;
+        }
+
+        #endregion
     }
 }
