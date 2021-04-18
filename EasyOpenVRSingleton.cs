@@ -489,6 +489,12 @@ namespace BOLL7708
             return error;
         }
 
+        public void ClearInputActions()
+        {
+            _inputActionSets.Clear();
+            _inputActions.Clear();
+        }
+
         /**
          * Register an analog action with a callback action
          */
