@@ -661,12 +661,15 @@ namespace BOLL7708
 
         private Tuple<string, string> GetScreenshotPaths(string prefix, string postfix, string timestampFormat = "yyyyMMdd_HHmmss_fff")
         {
-            var sb = new StringBuilder();
-            if (_screenshotPath != string.Empty) sb.Append($"{_screenshotPath}\\");
-            if (prefix != string.Empty) sb.Append($"{prefix}_");
-            sb.Append(DateTime.Now.ToString(timestampFormat));
-            var filePath = $"{sb.ToString()}";
-            var filePathVR = $"{sb.ToString()}_{postfix}";
+            var screenshotPath = _screenshotPath;
+            if (screenshotPath != string.Empty) screenshotPath = $"{screenshotPath}\\";
+            if (prefix != string.Empty) prefix = $"{prefix}_";
+            if (postfix != string.Empty) postfix = $"_{postfix}";
+            var timestamp = DateTime.Now.ToString(timestampFormat);
+
+            var filePath = $"{screenshotPath}{prefix}{timestamp}{postfix}";
+            var filePathVR = $"{screenshotPath}{prefix}{timestamp}_vr{postfix}";
+
             return new Tuple<string, string>(filePath, filePathVR);
         }
 
@@ -678,7 +681,7 @@ namespace BOLL7708
         public bool TakeScreenshot(
             out ScreenshotResult screenshotResult,
             string prefix = "",
-            string postfix = "vr")
+            string postfix = "")
         {
             uint handle = 0;
             var filePaths = GetScreenshotPaths(prefix, postfix);
@@ -704,7 +707,7 @@ namespace BOLL7708
         public bool RequestScreenshot(
             out ScreenshotResult screenshotResult,
             string prefix = "",
-            string postfix = "vr",
+            string postfix = "",
             EVRScreenshotType screenshotType = EVRScreenshotType.Stereo)
         {
             var filePaths = GetScreenshotPaths(prefix, postfix);
