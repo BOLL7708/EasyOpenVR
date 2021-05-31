@@ -1200,6 +1200,18 @@ namespace BOLL7708
             public double yaw;
             public double pitch;
             public double roll;
+            public YPR() { }
+            public YPR(double yaw, double pitch, double roll)
+            {
+                this.yaw = yaw;
+                this.pitch = pitch;
+                this.roll = roll;
+            }
+            public YPR(HmdVector3_t vec) {
+                pitch = vec.v0;
+                yaw = vec.v1;
+                roll = vec.v2;
+            }
         }
 
         public static class Utils
@@ -1661,6 +1673,18 @@ namespace BOLL7708
             return mat;
         }
 
+        #endregion
+
+        #region Acquisition
+        public static HmdVector3_t GetPosition(this HmdMatrix34_t mat)
+        {
+            return new HmdVector3_t
+            {
+                v1 = mat.m3,
+                v0 = mat.m7,
+                v2 = mat.m11
+            };
+        }
         #endregion
     }
 }
