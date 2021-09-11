@@ -743,50 +743,22 @@ namespace BOLL7708
         #region video
         public float GetRenderTargetForCurrentApp()
         {
-            EVRSettingsError error = EVRSettingsError.None;
-            var scale = OpenVR.Settings.GetFloat(
-                OpenVR.k_pch_SteamVR_Section,
-                OpenVR.k_pch_SteamVR_SupersampleScale_Float,
-                ref error
-            );
-            Debug.WriteLine($"Render scale: {scale}");
-            return scale;
+            return GetFloatSetting(OpenVR.k_pch_SteamVR_Section, OpenVR.k_pch_SteamVR_SupersampleScale_Float);
         }
 
         public bool GetSuperSamplingEnabledForCurrentApp()
         {
-            EVRSettingsError error = EVRSettingsError.None;
-            var enabled = OpenVR.Settings.GetBool(
-                OpenVR.k_pch_SteamVR_Section,
-                OpenVR.k_pch_SteamVR_SupersampleManualOverride_Bool,
-                ref error
-                );
-            DebugLog(error);
-            return enabled;
+            return GetBoolSetting(OpenVR.k_pch_SteamVR_Section, OpenVR.k_pch_SteamVR_SupersampleManualOverride_Bool);
         }
 
         public bool SetSuperSamplingEnabledForCurrentApp(bool enabled)
         {
-            EVRSettingsError error = EVRSettingsError.None;
-            OpenVR.Settings.SetBool(
-                OpenVR.k_pch_SteamVR_Section,
-                OpenVR.k_pch_SteamVR_SupersampleManualOverride_Bool,
-                enabled,
-                ref error
-            );
-            return DebugLog(error);
+            return SetBoolSetting(OpenVR.k_pch_SteamVR_Section, OpenVR.k_pch_SteamVR_SupersampleManualOverride_Bool, enabled);
         }
 
         public float GetSuperSamplingForCurrentApp()
         {
-            EVRSettingsError error = EVRSettingsError.None;
-            var scale = OpenVR.Settings.GetFloat(
-                OpenVR.k_pch_SteamVR_Section,
-                OpenVR.k_pch_SteamVR_SupersampleScale_Float,
-                ref error
-            );
-            DebugLog(error);
-            return scale;
+            return GetFloatSetting(OpenVR.k_pch_SteamVR_Section, OpenVR.k_pch_SteamVR_SupersampleScale_Float);
         }
 
         /**
@@ -796,14 +768,7 @@ namespace BOLL7708
          */
         public bool SetSuperSamplingForCurrentApp(float scale)
         {
-            EVRSettingsError error = EVRSettingsError.None;
-            OpenVR.Settings.SetFloat(
-                OpenVR.k_pch_SteamVR_Section,
-                OpenVR.k_pch_SteamVR_SupersampleScale_Float,
-                scale,
-                ref error
-            );
-            return DebugLog(error);
+            return SetFloatSetting(OpenVR.k_pch_SteamVR_Section, OpenVR.k_pch_SteamVR_SupersampleScale_Float, scale);
         }
         #endregion
 
@@ -901,6 +866,67 @@ namespace BOLL7708
         public bool SetFloatSetting(string section, string setting, float value) {
             EVRSettingsError error = EVRSettingsError.None;
             OpenVR.Settings.SetFloat(section, setting, value, ref error);
+            return DebugLog(error);
+        }
+
+        public bool GetBoolSetting(string section, string setting) {
+            EVRSettingsError error = EVRSettingsError.None;
+            var value = OpenVR.Settings.GetBool(
+                section,
+                setting,
+                ref error
+            );
+            DebugLog(error);
+            return value;
+        }
+
+        public bool SetBoolSetting(string section, string setting, bool value) {
+            EVRSettingsError error = EVRSettingsError.None;
+            OpenVR.Settings.SetBool(section, setting, value, ref error);
+            return DebugLog(error);
+        }
+
+        public int GetIntSetting(string section, string setting)
+        {
+            EVRSettingsError error = EVRSettingsError.None;
+            var value = OpenVR.Settings.GetInt32(
+                section,
+                setting,
+                ref error
+            );
+            DebugLog(error);
+            return value;
+        }
+
+        public bool SetIntSetting(string section, string setting, int value)
+        {
+            EVRSettingsError error = EVRSettingsError.None;
+            OpenVR.Settings.SetInt32(section, setting, value, ref error);
+            return DebugLog(error);
+        }
+
+        public string GetStringSetting(string section, string setting)
+        {
+            /* TODO: Reference Unity plugin?
+            EVRSettingsError error = EVRSettingsError.None;
+            var sb = new StringBuilder();
+            OpenVR.Settings.GetString(
+                section,
+                setting,
+                sb,
+
+                ref error
+            );
+            DebugLog(error);
+            return value;
+            */
+            return "";
+        }
+
+        public bool SetStringSetting(string section, string setting, string value)
+        {
+            EVRSettingsError error = EVRSettingsError.None;
+            OpenVR.Settings.SetString(section, setting, value, ref error);
             return DebugLog(error);
         }
 
