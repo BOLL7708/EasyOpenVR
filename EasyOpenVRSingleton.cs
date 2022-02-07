@@ -1379,6 +1379,33 @@ namespace BOLL7708
                     pitch = Math.Atan2(2 * q.x * q.w - 2 * q.y * q.z, 1 - 2 * sqx - 2 * sqz) // bank
                 };
             }
+
+            #region Measurement
+            /// <summary>
+            /// Returns the angle between two matrices in degrees.
+            /// </summary>
+            /// <param name="matOrigin"></param>
+            /// <param name="matTarget"></param>
+            /// <returns></returns>
+            public static double AngleBetween(HmdMatrix34_t matOrigin, HmdMatrix34_t matTarget)
+            {
+                var vecOrigin = GetUnitVec3();
+                var vecTarget = GetUnitVec3();                
+                vecOrigin = MultiplyVectorWithRotationMatrix(vecOrigin, matOrigin);
+                vecTarget = MultiplyVectorWithRotationMatrix(vecTarget, matTarget);
+                var vecSize = 1.0;
+                return Math.Acos(DotProduct(vecOrigin, vecTarget) / Math.Pow(vecSize, 2)) * (180/Math.PI);
+            }
+
+            private static HmdVector3_t GetUnitVec3() {
+                return new HmdVector3_t() { v0 = 0, v1 = 0, v2 = 1 };
+            }
+
+            private static double DotProduct(HmdVector3_t v1, HmdVector3_t v2)
+            {
+                return v1.v0 * v2.v0 + v1.v1 * v2.v1 + v1.v2 * v2.v2;
+            }
+            #endregion
         }
 
         public static class BitmapUtils
