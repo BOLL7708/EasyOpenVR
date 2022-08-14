@@ -155,7 +155,7 @@ namespace BOLL7708
             void MoveCorner(ref HmdVector3_t corner)
             {
                 // Will not change points at vertical 0, that's the bottom of the Chaperone.
-                // This at it appears the bottom gets reset to 0 at a regular interval anyway.
+                // This as it appears the bottom gets reset to 0 at a regular interval anyway.
                 corner.v0 += offset.v0;
                 if (corner.v1 != 0) corner.v1 += offset.v1;
                 corner.v2 += offset.v2;
