@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -59,8 +59,7 @@ namespace BOLL7708
         public bool Init()
         {
             EVRInitError error = EVRInitError.Unknown;
-            try
-            {
+            try {
                 _initState = OpenVR.InitInternal(ref error, _appType);
             }
             catch (Exception e)
@@ -293,8 +292,7 @@ namespace BOLL7708
             OpenVR.System.TriggerHapticPulse(index, 0, 10000); // This works: https://github.com/ValveSoftware/openvr/wiki/IVRSystem::TriggerHapticPulse
         }
 
-        public InputOriginInfo_t GetOriginTrackedDeviceInfo(ulong originHandle)
-        {
+        public InputOriginInfo_t GetOriginTrackedDeviceInfo(ulong originHandle) {
             var info = new InputOriginInfo_t();
             var error = OpenVR.Input.GetOriginTrackedDeviceInfo(originHandle, ref info, (uint)Marshal.SizeOf(info));
             DebugLog(error);
@@ -354,8 +352,7 @@ namespace BOLL7708
                 {
                     vrEvents.Add(vrEvent);
                 }
-            }
-            catch (Exception e)
+            } catch (Exception e)
             {
                 DebugLog(e, "Could not get new events");
             }
@@ -608,7 +605,7 @@ namespace BOLL7708
             var data = (InputAnalogActionData_t)inputAction.data;
             var error = OpenVR.Input.GetAnalogActionData(inputAction.handle, ref data, size, inputSourceHandle);
             var action = ((Action<InputAnalogActionData_t, InputActionInfo>)inputAction.action);
-            if (data.bActive) action.Invoke(data, inputAction.getInfo(inputSourceHandle));
+            if(data.bActive) action.Invoke(data, inputAction.getInfo(inputSourceHandle));
             return DebugLog(error, $"handle: {inputAction.handle}, error");
         }
 
@@ -697,8 +694,7 @@ namespace BOLL7708
             var error = OpenVR.Screenshots.TakeStereoScreenshot(ref handle, filePaths.Item1, filePaths.Item2);
             screenshotResult =
                 error == EVRScreenshotError.None ?
-                new ScreenshotResult
-                {
+                new ScreenshotResult {
                     handle = handle,
                     type = type,
                     filePath = filePaths.Item1,
@@ -724,8 +720,7 @@ namespace BOLL7708
             var error = OpenVR.Screenshots.RequestScreenshot(ref handle, screenshotType, filePaths.Item1, filePaths.Item2);
             screenshotResult =
                 error == EVRScreenshotError.None ?
-                new ScreenshotResult
-                {
+                new ScreenshotResult {
                     handle = handle,
                     type = screenshotType,
                     filePath = filePaths.Item1,
@@ -862,8 +857,7 @@ namespace BOLL7708
         /// <param name="section">Example: OpenVR.k_pch_CollisionBounds_Section</param>
         /// <param name="setting">Example: OpenVR.k_pch_SteamVR_SupersampleScale_Float</param>
         /// <returns>float value</returns>
-        public float GetFloatSetting(string section, string setting)
-        {
+        public float GetFloatSetting(string section, string setting) {
             EVRSettingsError error = EVRSettingsError.None;
             var value = OpenVR.Settings.GetFloat(
                 section,
@@ -874,15 +868,13 @@ namespace BOLL7708
             return value;
         }
 
-        public bool SetFloatSetting(string section, string setting, float value)
-        {
+        public bool SetFloatSetting(string section, string setting, float value) {
             EVRSettingsError error = EVRSettingsError.None;
             OpenVR.Settings.SetFloat(section, setting, value, ref error);
             return DebugLog(error);
         }
 
-        public bool GetBoolSetting(string section, string setting)
-        {
+        public bool GetBoolSetting(string section, string setting) {
             EVRSettingsError error = EVRSettingsError.None;
             var value = OpenVR.Settings.GetBool(
                 section,
@@ -893,8 +885,7 @@ namespace BOLL7708
             return value;
         }
 
-        public bool SetBoolSetting(string section, string setting, bool value)
-        {
+        public bool SetBoolSetting(string section, string setting, bool value) {
             EVRSettingsError error = EVRSettingsError.None;
             OpenVR.Settings.SetBool(section, setting, value, ref error);
             return DebugLog(error);
@@ -957,11 +948,11 @@ namespace BOLL7708
         /// <param name="anchor">Default is none, else index for which tracked device to attach overlay to</param>
         /// <param name="origin">If we have no anchor, we need an origin to set position, defaults to standing</param>
         /// <returns>0 if we failed to create an overlay</returns>
-        public ulong CreateOverlay(string uniqueKey, string title, HmdMatrix34_t transform, float width = 1, uint anchor = uint.MaxValue, ETrackingUniverseOrigin origin = ETrackingUniverseOrigin.TrackingUniverseStanding)
+        public ulong CreateOverlay(string uniqueKey, string title, HmdMatrix34_t transform, float width = 1, uint anchor=uint.MaxValue, ETrackingUniverseOrigin origin = ETrackingUniverseOrigin.TrackingUniverseStanding)
         {
             ulong handle = 0;
             var error = OpenVR.Overlay.CreateOverlay(uniqueKey, title, ref handle);
-            if (error == EVROverlayError.None)
+            if(error == EVROverlayError.None)
             {
                 OpenVR.Overlay.SetOverlayWidthInMeters(handle, width);
                 if (anchor != uint.MaxValue) OpenVR.Overlay.SetOverlayTransformTrackedDeviceRelative(handle, anchor, ref transform);
@@ -1006,10 +997,9 @@ namespace BOLL7708
         /// <param name="bmp"></param>
         public void SetOverlayPixels(ulong handle, Bitmap bmp)
         {
-            BitmapUtils.PointerFromBitmap(bmp, true, (pointer) =>
-            {
+            BitmapUtils.PointerFromBitmap(bmp, true, (pointer) => {
                 int bytesPerPixel = Bitmap.GetPixelFormatSize(bmp.PixelFormat) / 8;
-                var error = OpenVR.Overlay.SetOverlayRaw(handle, pointer, (uint)bmp.Width, (uint)bmp.Height, (uint)bytesPerPixel);
+                var error = OpenVR.Overlay.SetOverlayRaw(handle, pointer, (uint) bmp.Width, (uint) bmp.Height, (uint) bytesPerPixel);
             });
         }
 
@@ -1038,7 +1028,7 @@ namespace BOLL7708
             var error = OpenVR.Overlay.SetOverlayWidthInMeters(handle, width);
             return DebugLog(error);
         }
-
+        
         public bool SetOverlayVisibility(ulong handle, bool visible)
         {
             EVROverlayError error;
@@ -1046,7 +1036,7 @@ namespace BOLL7708
             else error = OpenVR.Overlay.HideOverlay(handle);
             return DebugLog(error);
         }
-
+        
         /**
          * Will have to explore this at a later date, right now my overlays are non-interactive.
          */
@@ -1082,9 +1072,9 @@ namespace BOLL7708
             uint height = 0;
             var error = OpenVR.Overlay.GetOverlayTextureSize(handle, ref width, ref height);
             DebugLog(error);
-            return (width == 0 || height == 0) ?
-                new OverlayTextureSize() :
-                new OverlayTextureSize { width = width, height = height, aspectRatio = (float)width / (float)height };
+            return (width == 0 || height == 0) ? 
+                new OverlayTextureSize() : 
+                new OverlayTextureSize { width=width, height=height, aspectRatio=(float)width/(float)height };
         }
         #endregion
 
@@ -1138,12 +1128,11 @@ namespace BOLL7708
         /// <param name="applicationKey">Application key, used to check if already installed.</param>
         /// <param name="alsoRegisterAutoLaunch">Optional flag to register for auto launch.</param>
         /// <returns></returns>
-        public bool AddApplicationManifest(string relativeManifestPath, string applicationKey, bool alsoRegisterAutoLaunch = false)
-        {
+        public bool AddApplicationManifest(string relativeManifestPath, string applicationKey, bool alsoRegisterAutoLaunch=false) {
             if (!OpenVR.Applications.IsApplicationInstalled(applicationKey))
             {
                 var manifestError = OpenVR.Applications.AddApplicationManifest(Path.GetFullPath(relativeManifestPath), false);
-                if (manifestError == EVRApplicationError.None && alsoRegisterAutoLaunch)
+                if(manifestError == EVRApplicationError.None && alsoRegisterAutoLaunch)
                 {
                     var autolaunchError = OpenVR.Applications.SetApplicationAutoLaunch(applicationKey, true);
                     return DebugLog(autolaunchError);
@@ -1152,7 +1141,7 @@ namespace BOLL7708
             }
             return false;
         }
-
+        
         /**
          * Will return the application ID for the currently running scene application.
          * Will return an empty string is there is no result.
@@ -1267,8 +1256,7 @@ namespace BOLL7708
                 this.pitch = pitch;
                 this.roll = roll;
             }
-            public YPR(HmdVector3_t vec)
-            {
+            public YPR(HmdVector3_t vec) {
                 pitch = vec.v0;
                 yaw = vec.v1;
                 roll = vec.v2;
@@ -1290,12 +1278,12 @@ namespace BOLL7708
             {
                 // Assuming the angles are in radians.
                 // Had to switch roll and pitch here to match SteamVR
-                var ch = (float)Math.Cos(e.yaw);
-                var sh = (float)Math.Sin(e.yaw);
-                var ca = (float)Math.Cos(e.roll);
-                var sa = (float)Math.Sin(e.roll);
-                var cb = (float)Math.Cos(e.pitch);
-                var sb = (float)Math.Sin(e.pitch);
+                var ch = (float) Math.Cos(e.yaw);
+                var sh = (float) Math.Sin(e.yaw);
+                var ca = (float) Math.Cos(e.roll);
+                var sa = (float) Math.Sin(e.roll);
+                var cb = (float) Math.Cos(e.pitch);
+                var sb = (float) Math.Sin(e.pitch);
 
                 return new HmdMatrix34_t
                 {
@@ -1329,8 +1317,7 @@ namespace BOLL7708
                 };
             }
 
-            public static HmdMatrix34_t AddVectorToMatrix(HmdMatrix34_t m, HmdVector3_t v)
-            {
+            public static HmdMatrix34_t AddVectorToMatrix(HmdMatrix34_t m, HmdVector3_t v) {
                 var v2 = MultiplyVectorWithRotationMatrix(v, m);
                 m.m3 += v2.v0;
                 m.m7 += v2.v1;
@@ -1347,13 +1334,13 @@ namespace BOLL7708
                     m1 = matA.m0 * matB.m1 + matA.m1 * matB.m5 + matA.m2 * matB.m9,
                     m2 = matA.m0 * matB.m2 + matA.m1 * matB.m6 + matA.m2 * matB.m10,
                     m3 = matA.m0 * matB.m3 + matA.m1 * matB.m7 + matA.m2 * matB.m11 + matA.m3,
-
+                    
                     // Row 1
                     m4 = matA.m4 * matB.m0 + matA.m5 * matB.m4 + matA.m6 * matB.m8,
                     m5 = matA.m4 * matB.m1 + matA.m5 * matB.m5 + matA.m6 * matB.m9,
                     m6 = matA.m4 * matB.m2 + matA.m5 * matB.m6 + matA.m6 * matB.m10,
                     m7 = matA.m4 * matB.m3 + matA.m5 * matB.m7 + matA.m6 * matB.m11 + matA.m7,
-
+                        
                     // Row 2
                     m8 = matA.m8 * matB.m0 + matA.m9 * matB.m4 + matA.m10 * matB.m8,
                     m9 = matA.m8 * matB.m1 + matA.m9 * matB.m5 + matA.m10 * matB.m9,
@@ -1426,15 +1413,14 @@ namespace BOLL7708
             public static double AngleBetween(HmdMatrix34_t matOrigin, HmdMatrix34_t matTarget)
             {
                 var vecOrigin = GetUnitVec3();
-                var vecTarget = GetUnitVec3();
+                var vecTarget = GetUnitVec3();                
                 vecOrigin = MultiplyVectorWithRotationMatrix(vecOrigin, matOrigin);
                 vecTarget = MultiplyVectorWithRotationMatrix(vecTarget, matTarget);
                 var vecSize = 1.0;
-                return Math.Acos(DotProduct(vecOrigin, vecTarget) / Math.Pow(vecSize, 2)) * (180 / Math.PI);
+                return Math.Acos(DotProduct(vecOrigin, vecTarget) / Math.Pow(vecSize, 2)) * (180/Math.PI);
             }
 
-            private static HmdVector3_t GetUnitVec3()
-            {
+            private static HmdVector3_t GetUnitVec3() {
                 return new HmdVector3_t() { v0 = 0, v1 = 0, v2 = 1 };
             }
 
@@ -1454,12 +1440,12 @@ namespace BOLL7708
             /// <param name="bmp">The system bitmap</param>
             /// <param name="flipRnB">Whether we should flip red and blue channels or not</param>
             /// <returns></returns>
-            public static NotificationBitmap_t NotificationBitmapFromBitmap(Bitmap bmp, bool flipRnB = true)
+            public static NotificationBitmap_t NotificationBitmapFromBitmap(Bitmap bmp, bool flipRnB=true)
             {
                 return NotificationBitmapFromBitmapData(BitmapDataFromBitmap(bmp, flipRnB));
             }
 
-            public static BitmapData BitmapDataFromBitmap(Bitmap bmpIn, bool flipRnB = false)
+            public static BitmapData BitmapDataFromBitmap(Bitmap bmpIn, bool flipRnB=false)
             {
                 Bitmap bmp = (Bitmap)bmpIn.Clone();
                 if (flipRnB) RGBtoBGR(bmp);
@@ -1543,11 +1529,11 @@ namespace BOLL7708
     public static class Extensions
     {
         #region Translation
-
+        
         public static HmdMatrix34_t Translate(this HmdMatrix34_t mat, HmdVector3_t v, bool localAxis = true)
         {
             if (!localAxis) return mat.Add(v);
-
+            
             var translationMatrix = new HmdMatrix34_t
             {
                 m0 = 1,
@@ -1560,7 +1546,7 @@ namespace BOLL7708
 
             return mat.Multiply(translationMatrix);
         }
-
+        
         public static HmdMatrix34_t Translate(this HmdMatrix34_t mat, float x, float y, float z, bool localAxis = true)
         {
             var translationVector = new HmdVector3_t
@@ -1572,7 +1558,7 @@ namespace BOLL7708
 
             return mat.Translate(translationVector, localAxis);
         }
-
+        
         #endregion
 
         #region Rotation
@@ -1646,18 +1632,9 @@ namespace BOLL7708
         {
             return new HmdMatrix34_t
             {
-                m0 = mat.m0 * val,
-                m1 = mat.m1 * val,
-                m2 = mat.m2 * val,
-                m3 = mat.m3 * val,
-                m4 = mat.m4 * val,
-                m5 = mat.m5 * val,
-                m6 = mat.m6 * val,
-                m7 = mat.m7 * val,
-                m8 = mat.m8 * val,
-                m9 = mat.m9 * val,
-                m10 = mat.m10 * val,
-                m11 = mat.m11 * val
+                m0 = mat.m0 * val, m1 = mat.m1 * val, m2 = mat.m2 * val, m3 = mat.m3 * val,
+                m4 = mat.m4 * val, m5 = mat.m5 * val, m6 = mat.m6 * val, m7 = mat.m7 * val,
+                m8 = mat.m8 * val, m9 = mat.m9 * val, m10 = mat.m10 * val, m11 = mat.m11 * val
             };
         }
 
@@ -1669,18 +1646,9 @@ namespace BOLL7708
         {
             return new HmdMatrix34_t
             {
-                m0 = matA.m0 + matB.m0,
-                m1 = matA.m1 + matB.m1,
-                m2 = matA.m2 + matB.m2,
-                m3 = matA.m3 + matB.m3,
-                m4 = matA.m4 + matB.m4,
-                m5 = matA.m5 + matB.m5,
-                m6 = matA.m6 + matB.m6,
-                m7 = matA.m7 + matB.m7,
-                m8 = matA.m8 + matB.m8,
-                m9 = matA.m9 + matB.m9,
-                m10 = matA.m10 + matB.m10,
-                m11 = matA.m11 + matB.m11,
+                m0 = matA.m0 + matB.m0, m1 = matA.m1 + matB.m1, m2 = matA.m2 + matB.m2, m3 = matA.m3 + matB.m3,
+                m4 = matA.m4 + matB.m4, m5 = matA.m5 + matB.m5, m6 = matA.m6 + matB.m6, m7 = matA.m7 + matB.m7,
+                m8 = matA.m8 + matB.m8, m9 = matA.m9 + matB.m9, m10 = matA.m10 + matB.m10, m11 = matA.m11 + matB.m11,
             };
         }
 
@@ -1700,18 +1668,9 @@ namespace BOLL7708
         {
             return new HmdMatrix34_t
             {
-                m0 = matA.m0 - matB.m0,
-                m1 = matA.m1 - matB.m1,
-                m2 = matA.m2 - matB.m2,
-                m3 = matA.m3 - matB.m3,
-                m4 = matA.m4 - matB.m4,
-                m5 = matA.m5 - matB.m5,
-                m6 = matA.m6 - matB.m6,
-                m7 = matA.m7 - matB.m7,
-                m8 = matA.m8 - matB.m8,
-                m9 = matA.m9 - matB.m9,
-                m10 = matA.m10 - matB.m10,
-                m11 = matA.m11 - matB.m11,
+                m0 = matA.m0 - matB.m0, m1 = matA.m1 - matB.m1, m2 = matA.m2 - matB.m2, m3 = matA.m3 - matB.m3,
+                m4 = matA.m4 - matB.m4, m5 = matA.m5 - matB.m5, m6 = matA.m6 - matB.m6, m7 = matA.m7 - matB.m7,
+                m8 = matA.m8 - matB.m8, m9 = matA.m9 - matB.m9, m10 = matA.m10 - matB.m10, m11 = matA.m11 - matB.m11,
             };
         }
 
@@ -1736,13 +1695,13 @@ namespace BOLL7708
                 m1 = matA.m1 + (matB.m1 - matA.m1) * amount,
                 m2 = matA.m2 + (matB.m2 - matA.m2) * amount,
                 m3 = matA.m3 + (matB.m3 - matA.m3) * amount,
-
+                
                 // Row two
                 m4 = matA.m4 + (matB.m4 - matA.m4) * amount,
                 m5 = matA.m5 + (matB.m5 - matA.m5) * amount,
                 m6 = matA.m6 + (matB.m6 - matA.m6) * amount,
                 m7 = matA.m7 + (matB.m7 - matA.m7) * amount,
-
+                
                 // Row three
                 m8 = matA.m8 + (matB.m8 - matA.m8) * amount,
                 m9 = matA.m9 + (matB.m9 - matA.m9) * amount,
@@ -1763,9 +1722,9 @@ namespace BOLL7708
 
             return new HmdVector3_t
             {
-                v1 = (float)yaw,
-                v0 = (float)pitch,
-                v2 = (float)roll
+                v1 = (float) yaw,
+                v0 = (float) pitch,
+                v2 = (float) roll
             };
         }
 
