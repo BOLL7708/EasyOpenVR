@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -297,6 +297,11 @@ namespace BOLL7708
             var error = OpenVR.Input.GetOriginTrackedDeviceInfo(originHandle, ref info, (uint)Marshal.SizeOf(info));
             DebugLog(error);
             return info;
+        }
+
+        public EDeviceActivityLevel GetTrackedDeviceActivityLevel(uint index)
+        {
+            return OpenVR.System.GetTrackedDeviceActivityLevel(index);
         }
         #endregion
 
@@ -1144,8 +1149,26 @@ namespace BOLL7708
         public string GetRunningApplicationId()
         {
             var pid = OpenVR.Applications.GetCurrentSceneProcessId();
+            if (pid == 0)
+            {
+                return string.Empty;
+            }
             var sb = new StringBuilder((int)OpenVR.k_unMaxApplicationKeyLength);
             var error = OpenVR.Applications.GetApplicationKeyByProcessId(pid, sb, OpenVR.k_unMaxApplicationKeyLength);
+            DebugLog(error);
+            return sb.ToString();
+        }
+
+        public string GetApplicationPropertyString(string applicationKey, EVRApplicationProperty applicationProperty)
+        {
+            if (string.IsNullOrEmpty(applicationKey))
+            {
+                return String.Empty;
+            }
+            var error = new EVRApplicationError();
+            var sbLenght = (int)OpenVR.Applications.GetApplicationPropertyString(applicationKey, applicationProperty, null, 0, ref error);
+            var sb = new StringBuilder(sbLenght);
+            OpenVR.Applications.GetApplicationPropertyString(applicationKey, applicationProperty, sb, (uint)sbLenght, ref error);
             DebugLog(error);
             return sb.ToString();
         }
