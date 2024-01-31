@@ -286,10 +286,10 @@ namespace BOLL7708
         }
 
         // TODO: This has apparently been deprecated, figure out how to do it with the new input system.
-        public void TriggerHapticPulseInController(ETrackedControllerRole role)
+        public void TriggerHapticPulseInController(ETrackedControllerRole role, ushort durationMicroSec = 10000)
         {
             var index = GetIndexForControllerRole(role);
-            OpenVR.System.TriggerHapticPulse(index, 0, 10000); // This works: https://github.com/ValveSoftware/openvr/wiki/IVRSystem::TriggerHapticPulse
+            OpenVR.System.TriggerHapticPulse(index, 0, durationMicroSec); // This works: https://github.com/ValveSoftware/openvr/wiki/IVRSystem::TriggerHapticPulse
         }
 
         public InputOriginInfo_t GetOriginTrackedDeviceInfo(ulong originHandle) {
