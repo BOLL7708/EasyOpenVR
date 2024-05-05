@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Valve.VR;
 
-namespace BOLL7708
+namespace EasyOpenVR
 {
     public sealed class EasyOpenVRSingleton
     {
