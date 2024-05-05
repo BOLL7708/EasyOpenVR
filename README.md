@@ -10,7 +10,11 @@ As this is a work-in-progress there might be breaking changes along the way, the
 1. To use this either download the repo directly or add it as a git submodule by running the following command in the root of your project, replace `TargetFolder` with your own value: `git submodule add https://github.com/BOLL7708/EasyOpenVR.git EasyOpenVR`
 2. In the `EasyOpenVR` folder, run the `.cmd` file which downloads the latest OpenVR dependencies into the project.
 3. This is a Class Library, so to use this you add an `Existing Project` to your solution, pick the `EasyOpenVR` folder, and it should show up next to your current project in your solution.
-4. Make sure to build for 64bit.
+4. Then reference this class library it in the main project .csproj file, in `<ItemGroup>`.
+```xml
+<ProjectReference Include="..\EasyOpenVR\EasyOpenVR.csproj" />
+```
+5. Make sure to build for 64bit.
 
 ## Usage
 1. To use the singleton class, which is my current approach, simply include the namespace by adding `using BOLL7708;` and then grab an instance from `EasyOpenVRSingleton.Instance`
