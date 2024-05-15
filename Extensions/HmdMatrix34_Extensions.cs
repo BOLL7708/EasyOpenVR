@@ -1,6 +1,7 @@
+using EasyOpenVR.Utils;
 using Valve.VR;
 
-namespace EasyOpenVR.Utils;
+namespace EasyOpenVR.Extensions;
 
 public static class HmdMatrix34_Extensions
 {
