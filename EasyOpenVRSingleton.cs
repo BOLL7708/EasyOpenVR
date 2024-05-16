@@ -3,9 +3,9 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Text;
+using EasyOpenVR.Extensions;
 using EasyOpenVR.Utils;
 using Valve.VR;
-using EasyOpenVR.Extensions;
 
 namespace EasyOpenVR;
 
@@ -142,91 +142,75 @@ public sealed class EasyOpenVRSingleton
         return size;
     }
 
+    /**
+     * TODO: Retire
+     * Will move the universe by the provided offset.
+     */
     public bool MoveUniverse(HmdVector3_t offset, bool moveChaperone = true, bool moveLiveZeroPose = true)
     {
-        OpenVR.ChaperoneSetup.RevertWorkingCopy(); // Sets working copy to current live settings
-        if (moveLiveZeroPose) MoveLiveZeroPose(offset);
-        if (moveChaperone) MoveChaperoneBounds(GeneralUtils.InvertVector(offset));
+        ResetUniverse();
+        if (moveLiveZeroPose) TranslateUniverse(offset);
+        if (moveChaperone) TranslateChaperoneBounds(GeneralUtils.InvertVector(offset));
         var success =
             OpenVR.ChaperoneSetup.CommitWorkingCopy(EChaperoneConfigFile.Live); // Apply changes to live settings
         if (!success) DebugLog("Failure to commit Chaperone changes.");
         return success;
     }
 
-    public bool MoveUniverse(HmdVector3_t offset, EasingUtils.EasingType easingType, EasingUtils.EasingMode easingMode, int duration, bool reset)
+    /**
+     * Will move the working copy of the ChaperoneSetup (seated, standing & bounds) after having retrieved the current values.
+     */
+    public void TranslateUniverse(HmdVector3_t offset, bool showPreview = true)
     {
-        if (duration > 0)
-        {
-            var thread = new Thread(() => AnimationWorker(offset, easingType, easingMode, duration, reset));
-            if (!thread.IsAlive) thread.Start();
-        }
-        else
-        {
-            
-        }
-
-        return true;
-    }
-
-    private void AnimationWorker(HmdVector3_t offset, EasingUtils.EasingType easingType, EasingUtils.EasingMode easingMode, int duration, bool reset)
-    {
-        Thread.CurrentThread.IsBackground = true;
-        var hz = GetFloatTrackedDeviceProperty(0, ETrackedDeviceProperty.Prop_DisplayFrequency_Float);
-        var msPerFrame = 1000 / hz;
-        var frameCount = (int)Math.Ceiling(duration / msPerFrame);
         var standingPose = new HmdMatrix34_t();
         OpenVR.ChaperoneSetup.GetWorkingStandingZeroPoseToRawTrackingPose(ref standingPose);
         var sittingPose = new HmdMatrix34_t();
         OpenVR.ChaperoneSetup.GetWorkingSeatedZeroPoseToRawTrackingPose(ref sittingPose);
-        HmdQuad_t[] physQuad;
-        OpenVR.ChaperoneSetup.GetWorkingCollisionBoundsInfo(out physQuad);
-
-        var timeLoopStarted = 0L;
-        var timeSpent = 0.0;
-        var value = 0.0;
-        var easeFunc = EasingUtils.Get(easingType, easingMode);
-        var easeValue = 0.0;
-        for (var i = 0; i < frameCount; i++)
-        {
-            timeLoopStarted = DateTime.Now.Ticks;
-            value = (double)i / frameCount;
-            easeValue = easeFunc(value);
-            TranslateUniverse(offset, (float)easeValue, standingPose, sittingPose, physQuad);
-            timeSpent = (double)(DateTime.Now.Ticks - timeLoopStarted) / TimeSpan.TicksPerMillisecond;
-            Thread.Sleep((int)Math.Round(Math.Max(1.0, msPerFrame - timeSpent))); // Animation time per frame adjusted by the time it took to animate.
-        }
-
-        if (reset) ResetUniverse();
+        OpenVR.ChaperoneSetup.GetWorkingCollisionBoundsInfo(out var physQuad);
+        TranslateUniverse(offset, standingPose, sittingPose, physQuad, showPreview);
     }
 
-    public void TranslateUniverse(HmdVector3_t offset, float easeValue, HmdMatrix34_t standingPose, HmdMatrix34_t sittingPose, HmdQuad_t[] physQuad)
+    /**
+     * Will move the working copy of the ChaperoneSetup (seated, standing & bounds) based on the provided values.
+     */
+    public void TranslateUniverse(HmdVector3_t offset, HmdMatrix34_t standingPose, HmdMatrix34_t sittingPose, HmdQuad_t[] physQuad, bool showPreview = true)
     {
-        offset = GeneralUtils.MultiplyVectorWithRotationMatrix(offset, standingPose).Multiply((float)easeValue);
+        offset = GeneralUtils.MultiplyVectorWithRotationMatrix(offset, standingPose);
         standingPose = standingPose.Translate(offset);
         OpenVR.ChaperoneSetup.SetWorkingStandingZeroPoseToRawTrackingPose(ref standingPose);
         sittingPose = sittingPose.Translate(offset);
         OpenVR.ChaperoneSetup.SetWorkingSeatedZeroPoseToRawTrackingPose(ref sittingPose);
-        MoveChaperoneBounds(physQuad, GeneralUtils.InvertVector(offset));
-        OpenVR.ChaperoneSetup.ShowWorkingSetPreview();
+        TranslateChaperoneBounds(GeneralUtils.InvertVector(offset), physQuad);
+        if(showPreview) OpenVR.ChaperoneSetup.ShowWorkingSetPreview();
     }
     
+    /**
+     * Will hide the preview and reset the working copy of the ChaperoneSetup to the current live settings.
+     */
     public void ResetUniverse()
     {
         OpenVR.ChaperoneSetup.HideWorkingSetPreview();
         OpenVR.ChaperoneSetup.RevertWorkingCopy();
     }
 
-    public bool MoveChaperoneBounds(HmdVector3_t offset)
+    /**
+     * Will save the working copy of the ChaperoneSetup to disk.
+     */
+    public bool SaveUniverse(EChaperoneConfigFile file = EChaperoneConfigFile.Live)
     {
-        HmdQuad_t[] physQuad;
-        var success = OpenVR.ChaperoneSetup.GetWorkingCollisionBoundsInfo(out physQuad);
-        MoveChaperoneBounds(physQuad, offset);
+        return OpenVR.ChaperoneSetup.CommitWorkingCopy(file);
+    }
+
+    public bool TranslateChaperoneBounds(HmdVector3_t offset)
+    {
+        var success = OpenVR.ChaperoneSetup.GetWorkingCollisionBoundsInfo(out var physQuad);
+        TranslateChaperoneBounds(offset, physQuad);
         
         if (!success) DebugLog("Failure to load Chaperone bounds.");
         return success;
     }
 
-    public void MoveChaperoneBounds(HmdQuad_t[] physQuad, HmdVector3_t offset) {
+    public void TranslateChaperoneBounds(HmdVector3_t offset, HmdQuad_t[] physQuad) {
         for (var i = 0; i < physQuad.Length; i++)
         {
             MoveCorner(ref physQuad[i].vCorners0);
@@ -246,29 +230,6 @@ public sealed class EasyOpenVRSingleton
             corner.v2 += offset.v2;
         }
     }
-
-    public void MoveLiveZeroPose(HmdVector3_t offset)
-    {
-        var standingPos = new HmdMatrix34_t();
-        var sittingPos = new HmdMatrix34_t();
-
-        OpenVR.ChaperoneSetup.GetWorkingStandingZeroPoseToRawTrackingPose(ref standingPos);
-        OpenVR.ChaperoneSetup.GetWorkingSeatedZeroPoseToRawTrackingPose(ref sittingPos);
-
-        // As the zero pose is relative to the unvierse calibration and not the play area 
-        // we need to adjust the offset with the rotation of the universe.
-        offset = GeneralUtils.MultiplyVectorWithRotationMatrix(offset, standingPos);
-        standingPos.m3 += offset.v0;
-        standingPos.m7 += offset.v1;
-        standingPos.m11 += offset.v2;
-        sittingPos.m3 += offset.v0;
-        sittingPos.m7 += offset.v1;
-        sittingPos.m11 += offset.v2;
-
-        OpenVR.ChaperoneSetup.SetWorkingStandingZeroPoseToRawTrackingPose(ref standingPos);
-        OpenVR.ChaperoneSetup.SetWorkingSeatedZeroPoseToRawTrackingPose(ref sittingPos);
-    }
-
     #endregion
 
     #region controller
