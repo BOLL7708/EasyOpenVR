@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Valve.VR;
 
 namespace EasyOpenVR.Extensions;
@@ -13,6 +14,7 @@ public static class HmdVector3_Extensions
             v2 = vec.v2 * val
         };
     }
+
     public static HmdVector3_t Add(this HmdVector3_t vec, HmdVector3_t other)
     {
         return new HmdVector3_t
@@ -21,5 +23,10 @@ public static class HmdVector3_Extensions
             v1 = vec.v1 + other.v1,
             v2 = vec.v2 + other.v2
         };
+    }
+
+    public static double Length(this HmdVector3_t vec)
+    {
+        return Math.Sqrt(vec.v0 * vec.v0 + vec.v1 * vec.v1 + vec.v2 * vec.v2);
     }
 }

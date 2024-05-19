@@ -173,14 +173,14 @@ public sealed class EasyOpenVRSingleton
     /**
      * Will move the working copy of the ChaperoneSetup (seated, standing & bounds) based on the provided values.
      */
-    public void TranslateUniverse(HmdVector3_t offset, HmdMatrix34_t standingPose, HmdMatrix34_t sittingPose, HmdQuad_t[] physQuad, bool showPreview = true)
+    public void TranslateUniverse(HmdVector3_t offset, HmdMatrix34_t standingPose, HmdMatrix34_t sittingPose, HmdQuad_t[] physQuad, bool showPreview = true, bool updateChaperone = false)
     {
         offset = GeneralUtils.MultiplyVectorWithRotationMatrix(offset, standingPose);
         standingPose = standingPose.Translate(offset);
         OpenVR.ChaperoneSetup.SetWorkingStandingZeroPoseToRawTrackingPose(ref standingPose);
         sittingPose = sittingPose.Translate(offset);
         OpenVR.ChaperoneSetup.SetWorkingSeatedZeroPoseToRawTrackingPose(ref sittingPose);
-        TranslateChaperoneBounds(GeneralUtils.InvertVector(offset), physQuad);
+        if(updateChaperone) TranslateChaperoneBounds(GeneralUtils.InvertVector(offset), physQuad);
         if(showPreview) OpenVR.ChaperoneSetup.ShowWorkingSetPreview();
     }
     
