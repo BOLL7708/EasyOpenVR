@@ -3,8 +3,19 @@ using Valve.VR;
 
 namespace EasyOpenVR.Extensions;
 
-public static class HmdMatrix34_Extensions
+public static class HmdMatrix34Extensions
 {
+    #region utility
+    // Dunno if you like having this here, but it helped me with debugging.
+    public static string ToValueString(this HmdMatrix34_t mat)
+    {
+        return "HmdMatrix34_t:\n"
+               + $"S: {mat.m0:F3}, R: {mat.m1:F3}, R: {mat.m2:F3}, P: {mat.m3:F3},\n"
+               + $"R: {mat.m4:F3}, S: {mat.m5:F3}, R: {mat.m6:F3}, P: {mat.m7:F3},\n"
+               + $"R: {mat.m8:F3}, R: {mat.m9:F3}, S: {mat.m10:F3}, P: {mat.m11:F3}";
+    }
+    #endregion
+    
     #region Translation
 
     public static HmdMatrix34_t Translate(this HmdMatrix34_t mat, HmdVector3_t v, bool localAxis = true)
@@ -241,5 +252,16 @@ public static class HmdMatrix34_Extensions
         };
     }
 
+    #endregion
+    
+    #region Vector Operations
+    public static HmdMatrix34_t AddVector(this HmdMatrix34_t m, HmdVector3_t v)
+    {
+        var v2 = v.Rotate(m);
+        m.m3 += v2.v0;
+        m.m7 += v2.v1;
+        m.m11 += v2.v2;
+        return m;
+    }
     #endregion
 }

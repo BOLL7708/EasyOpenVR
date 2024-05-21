@@ -1,9 +1,10 @@
 using EasyOpenVR.Data;
+using EasyOpenVR.Extensions;
 using Valve.VR;
 
 namespace EasyOpenVR.Utils;
 
-public class GeneralUtils
+public static class GeneralUtils
 {
     public static HmdMatrix34_t GetEmptyTransform()
     {
@@ -40,34 +41,7 @@ public class GeneralUtils
             m10 = -sh * sa * sb + ch * cb
         };
     }
-
-    public static HmdVector3_t InvertVector(HmdVector3_t position)
-    {
-        position.v0 = -position.v0;
-        position.v1 = -position.v1;
-        position.v2 = -position.v2;
-        return position;
-    }
-
-    public static HmdVector3_t MultiplyVectorWithRotationMatrix(HmdVector3_t v, HmdMatrix34_t m)
-    {
-        return new HmdVector3_t
-        {
-            v0 = m.m0 * v.v0 + m.m1 * v.v1 + m.m2 * v.v2,
-            v1 = m.m4 * v.v0 + m.m5 * v.v1 + m.m6 * v.v2,
-            v2 = m.m8 * v.v0 + m.m9 * v.v1 + m.m10 * v.v2
-        };
-    }
-
-    public static HmdMatrix34_t AddVectorToMatrix(HmdMatrix34_t m, HmdVector3_t v)
-    {
-        var v2 = MultiplyVectorWithRotationMatrix(v, m);
-        m.m3 += v2.v0;
-        m.m7 += v2.v1;
-        m.m11 += v2.v2;
-        return m;
-    }
-
+    
     public static HmdMatrix34_t MultiplyMatrixWithMatrix(HmdMatrix34_t matA, HmdMatrix34_t matB)
     {
         return new HmdMatrix34_t
@@ -90,14 +64,6 @@ public class GeneralUtils
             m10 = matA.m8 * matB.m2 + matA.m9 * matB.m6 + matA.m10 * matB.m10,
             m11 = matA.m8 * matB.m3 + matA.m9 * matB.m7 + matA.m10 * matB.m11 + matA.m11,
         };
-    }
-
-    // Dunno if you like having this here, but it helped me with debugging.
-    public static string MatToString(HmdMatrix34_t mat)
-    {
-        return $"[{mat.m0}, {mat.m1}, {mat.m2}, {mat.m3},\n" +
-               $"{mat.m4}, {mat.m5}, {mat.m6}, {mat.m7},\n" +
-               $"{mat.m8}, {mat.m9}, {mat.m10}, {mat.m11}]";
     }
 
     public static HmdQuaternion_t QuaternionFromMatrix(HmdMatrix34_t m)
@@ -160,8 +126,8 @@ public class GeneralUtils
     {
         var vecOrigin = GetUnitVec3();
         var vecTarget = GetUnitVec3();
-        vecOrigin = MultiplyVectorWithRotationMatrix(vecOrigin, matOrigin);
-        vecTarget = MultiplyVectorWithRotationMatrix(vecTarget, matTarget);
+        vecOrigin = vecOrigin.Rotate(matOrigin);
+        vecTarget = vecTarget.Rotate(matTarget);
         const double vecSize = 1.0;
         return Math.Acos(DotProduct(vecOrigin, vecTarget) / Math.Pow(vecSize, 2)) * (180 / Math.PI);
     }
