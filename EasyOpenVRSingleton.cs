@@ -161,23 +161,22 @@ public sealed class EasyOpenVRSingleton
     }
 
     /**
-     * Will move the working copy of the ChaperoneSetup after having retrieved the current values.
+     * Will move (meters) and rotate (degrees) the working copy of the current ChaperoneSetup after having retrieved the current values.
      */
-    public void TranslateUniverse(HmdVector3_t offset, bool showPreview = true, bool updateChaperone = false)
+    public void ModifyUniverse(HmdVector3_t offset, float rotate, bool showPreview = true)
     {
         var originPose = GetOriginPose();
-        OpenVR.ChaperoneSetup.GetWorkingCollisionBoundsInfo(out var physQuad);
-        TranslateUniverse(offset, originPose, originPose, physQuad, showPreview, updateChaperone);
+        ModifyUniverse(offset, rotate, originPose, originPose, showPreview);
     }
 
     /**
-     * Will move the working copy of the ChaperoneSetup (seated, standing & bounds) based on the provided values.
+     * Will move (meters) and rotate (degrees) the working copy of the current ChaperoneSetup based on the provided values.
      */
-    public void TranslateUniverse(HmdVector3_t offset, HmdMatrix34_t originPose, HmdMatrix34_t correctionPose, HmdQuad_t[] physQuad, bool showPreview = true, bool updateChaperone = false)
+    public void ModifyUniverse(HmdVector3_t offset, float rotate, HmdMatrix34_t originPose, HmdMatrix34_t correctionPose, bool showPreview = true)
     {
         offset = offset.Rotate(correctionPose);
         var trackingSpace = OpenVR.Compositor.GetTrackingSpace();
-        var pose = originPose.Translate(offset);
+        var pose = originPose.Translate(offset).RotateY(rotate);
         switch (trackingSpace)
         {
             case ETrackingUniverseOrigin.TrackingUniverseStanding:
@@ -187,7 +186,6 @@ public sealed class EasyOpenVRSingleton
                 OpenVR.ChaperoneSetup.SetWorkingSeatedZeroPoseToRawTrackingPose(ref pose);
                 break;
         }
-        if(updateChaperone) TranslateChaperoneBounds(offset.Invert(), physQuad);
         if(showPreview) OpenVR.ChaperoneSetup.ShowWorkingSetPreview();
     }
     
@@ -208,16 +206,16 @@ public sealed class EasyOpenVRSingleton
         return OpenVR.ChaperoneSetup.CommitWorkingCopy(file);
     }
 
-    public bool TranslateChaperoneBounds(HmdVector3_t offset)
+    public bool ModifyChaperoneBounds(HmdVector3_t offset)
     {
         var success = OpenVR.ChaperoneSetup.GetWorkingCollisionBoundsInfo(out var physQuad);
-        TranslateChaperoneBounds(offset, physQuad);
+        ModifyChaperoneBounds(offset, physQuad);
         
         if (!success) DebugLog("Failure to load Chaperone bounds.");
         return success;
     }
 
-    public void TranslateChaperoneBounds(HmdVector3_t offset, HmdQuad_t[] physQuad) {
+    public void ModifyChaperoneBounds(HmdVector3_t offset, HmdQuad_t[] physQuad) {
         for (var i = 0; i < physQuad.Length; i++)
         {
             MoveCorner(ref physQuad[i].vCorners0);

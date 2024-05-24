@@ -111,6 +111,11 @@ public static class HmdMatrix34Extensions
         return mat.RotateX(angleX, degrees).RotateY(angleY, degrees).RotateZ(angleZ, degrees);
     }
 
+    public static HmdMatrix34_t Rotate(this HmdMatrix34_t mat, HmdVector3_t angles, bool degrees = true)
+    {
+        return mat.Rotate(angles.v0, angles.v1, angles.v2, degrees);
+    }
+
     #endregion
 
     #region Multiplication
