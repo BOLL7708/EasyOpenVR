@@ -1018,20 +1018,11 @@ public sealed class EasyOpenVRSingleton
 
     public string GetStringSetting(string section, string setting)
     {
-        /* TODO: Reference Unity plugin?
-        EVRSettingsError error = EVRSettingsError.None;
-        var sb = new StringBuilder();
-        OpenVR.Settings.GetString(
-            section,
-            setting,
-            sb,
-
-            ref error
-        );
+        var error = new EVRSettingsError();
+        StringBuilder sb = new StringBuilder((int)OpenVR.k_unMaxSettingsKeyLength);
+        OpenVR.Settings.GetString(section, setting, sb, OpenVR.k_unMaxSettingsKeyLength, ref error);
         DebugLog(error);
-        return value;
-        */
-        return "";
+        return sb.ToString();
     }
 
     public bool SetStringSetting(string section, string setting, string value)
