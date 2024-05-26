@@ -434,9 +434,14 @@ public sealed class EasyOpenVRSingleton
     public enum InputSource
     {
         [Description("/unrestricted")] Any,
+        
+        [Description(OpenVR.k_pchPathDevices)] Devices,
 
         [Description(OpenVR.k_pchPathUserHandLeft)]
         LeftHand,
+        
+        [Description(OpenVR.k_pchPathUserWristLeft)]
+        LeftWrist,
 
         [Description(OpenVR.k_pchPathUserElbowLeft)]
         LeftElbow,
@@ -446,12 +451,18 @@ public sealed class EasyOpenVRSingleton
 
         [Description(OpenVR.k_pchPathUserKneeLeft)]
         LeftKnee,
+        
+        [Description(OpenVR.k_pchPathUserAnkleLeft)]
+        LeftAnkle,
 
         [Description(OpenVR.k_pchPathUserFootLeft)]
         LeftFoot,
 
         [Description(OpenVR.k_pchPathUserHandRight)]
         RightHand,
+        
+        [Description(OpenVR.k_pchPathUserWristRight)]
+        RightWrist,
 
         [Description(OpenVR.k_pchPathUserElbowRight)]
         RightElbow,
@@ -461,6 +472,9 @@ public sealed class EasyOpenVRSingleton
 
         [Description(OpenVR.k_pchPathUserKneeRight)]
         RightKnee,
+        
+        [Description(OpenVR.k_pchPathUserAnkleRight)]
+        RightAnkle,
 
         [Description(OpenVR.k_pchPathUserFootRight)]
         RightFoot,
@@ -494,7 +508,8 @@ public sealed class EasyOpenVRSingleton
     {
         Analog,
         Digital,
-        Pose
+        Pose,
+        SkeletonSummary
     }
 
     private class InputAction
@@ -598,6 +613,22 @@ public sealed class EasyOpenVRSingleton
         var error = RegisterAction(ref ia);
         return DebugLog(error);
     }
+    
+    /**
+     * Register a skeleton action with a callback action
+     */
+    public bool RegisterSkeletonSummaryAction(string path, Action<VRSkeletalSummaryData_t, InputActionInfo> action)
+    {
+        var ia = new InputAction
+        {
+            path = path,
+            type = InputType.SkeletonSummary,
+            action = action,
+            data = new VRSkeletalSummaryData_t()
+        };
+        var error = RegisterAction(ref ia);
+        return DebugLog(error);
+    }
 
     /**
      * Register a digital action with a callback action
@@ -658,12 +689,13 @@ public sealed class EasyOpenVRSingleton
      * Digital actions triggers on change, analog actions every update.
      * OBS: Only run this once per update, or you'll get no input data at all.
      */
-    public bool UpdateActionStates(ulong[] inputSourceHandles = null)
+    public bool UpdateActionStates(ulong[] inputSourceHandles, ulong skeletonSummaryInputSourceHandle)
     {
-        if (inputSourceHandles == null) inputSourceHandles = new ulong[] { OpenVR.k_ulInvalidPathHandle };
-        var error = OpenVR.Input.UpdateActionState(_inputActionSets.ToArray(),
-            (uint)Marshal.SizeOf(typeof(VRActiveActionSet_t)));
-
+        if (inputSourceHandles.Length == 0) inputSourceHandles = [OpenVR.k_ulInvalidPathHandle];
+        var error = OpenVR.Input.UpdateActionState(
+            _inputActionSets.ToArray(),
+            (uint)Marshal.SizeOf(typeof(VRActiveActionSet_t))
+        );
         _inputActions.ForEach((InputAction action) =>
         {
             switch (action.type)
@@ -677,9 +709,21 @@ public sealed class EasyOpenVRSingleton
                 case InputType.Pose:
                     foreach (var handle in inputSourceHandles) GetPoseAction(action, handle);
                     break;
+                case InputType.SkeletonSummary:
+                    GetSkeletalSummary(action, skeletonSummaryInputSourceHandle);
+                    break;
             }
         });
         return DebugLog(error);
+    }
+    
+    private bool GetSkeletalSummary(InputAction inputAction, ulong inputSourceHandle)
+    {
+        var data = (VRSkeletalSummaryData_t)inputAction.data;
+        var error = OpenVR.Input.GetSkeletalSummaryData(inputAction.handle, EVRSummaryType.FromDevice, ref data);
+        var action = ((Action<VRSkeletalSummaryData_t, InputActionInfo>)inputAction.action);
+        action.Invoke(data, inputAction.getInfo(inputSourceHandle));
+        return DebugLog(error, $"handle: {inputAction.handle}, error");
     }
 
     private bool GetAnalogAction(InputAction inputAction, ulong inputSourceHandle)
