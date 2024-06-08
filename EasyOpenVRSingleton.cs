@@ -723,7 +723,7 @@ public sealed class EasyOpenVRSingleton
         var error = OpenVR.Input.GetSkeletalSummaryData(inputAction.handle, EVRSummaryType.FromDevice, ref data);
         var action = ((Action<VRSkeletalSummaryData_t, InputActionInfo>)inputAction.action);
         action.Invoke(data, inputAction.getInfo(inputSourceHandle));
-        return DebugLog(error, $"handle: {inputAction.handle}, error");
+        return true; // DebugLog(error, $"handle: {inputAction.handle}, error"); // This spams continuously when no controllers are connected.
     }
 
     private bool GetAnalogAction(InputAction inputAction, ulong inputSourceHandle)
