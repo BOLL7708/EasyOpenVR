@@ -1,3 +1,4 @@
+using System;
 using EasyOpenVR.Utils;
 using Valve.VR;
 
