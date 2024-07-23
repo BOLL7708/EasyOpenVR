@@ -392,7 +392,7 @@ public sealed class EasyOpenVRSingleton
 
     public void UnregisterEvent(EVREventType type)
     {
-        UnregisterEvents(new EVREventType[1] { type });
+        UnregisterEvents([type]);
     }
 
     public void UnregisterEvents(EVREventType[] types)
