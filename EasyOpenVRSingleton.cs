@@ -1,6 +1,9 @@
+using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using EasyOpenVR.Extensions;
@@ -384,6 +387,19 @@ public sealed class EasyOpenVRSingleton
         {
             if (!_events.ContainsKey(t)) _events.Add(t, new List<Action<VREvent_t>>());
             _events[t].Add(action);
+        }
+    }
+
+    public void UnregisterEvent(EVREventType type)
+    {
+        UnregisterEvents(new EVREventType[1] { type });
+    }
+
+    public void UnregisterEvents(EVREventType[] types)
+    {
+        foreach (var t in types)
+        {
+            if (_events.ContainsKey(t)) _events.Remove(t);
         }
     }
 

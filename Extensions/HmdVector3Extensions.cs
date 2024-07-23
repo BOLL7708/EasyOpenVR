@@ -1,3 +1,4 @@
+using System;
 using Valve.VR;
 
 namespace EasyOpenVR.Extensions;
