@@ -7,10 +7,10 @@ This is a collection of methods and functions that has been figured out while tr
 As this is a work-in-progress there might be breaking changes along the way, the hope is to keep that to a minimum, as this is used in multiple projects. If nothing else, the code in this project can act as a place to reference how to call certain OpenVR APIs from C#.
 
 ## Installation
-1. To use this either download the repo directly or add it as a git submodule by running the following command in the root of your project, replace `TargetFolder` with your own value: `git submodule add https://github.com/BOLL7708/EasyOpenVR.git EasyOpenVR`
+1. To use this either download the repo directly or add it as a git submodule by running the following command **in the root of your project**, optionally replace `TargetFolder` with your own value: `git submodule add https://github.com/BOLL7708/EasyOpenVR.git EasyOpenVR`
 2. In the `EasyOpenVR` folder, run the `.cmd` file which downloads the latest OpenVR dependencies into the project.
-3. This is a Class Library, so to use this you add an `Existing Project` to your solution, pick the `EasyOpenVR` folder, and it should show up next to your current project in your solution.
-4. Then reference this class library it in the main project .csproj file, in `<ItemGroup>`.
+3. This is a Class Library, so to use this you add an `Existing Project` to your solution, pick the `EasyOpenVR` folder or depending on IDE the solutions file in the folder, and it should show up next to your current project in your solution.
+4. Then reference this class library it in the main project .csproj file, in `<ItemGroup>`, or let your IDE add it when referenced, if it can do that.
 ```xml
 <ProjectReference Include="..\EasyOpenVR\EasyOpenVR.csproj" />
 ```
