@@ -190,14 +190,20 @@ public partial class EasyOpenVr
 
                     if (_initParams.QuitWithRuntime)
                     {
-                        Event.Register((in _) =>
-                        {
-                            // TODO: I think we should always disconnect if the runtime quits
-                            //  OpenVR2WS also indicates it should stop running...
-                            shouldQuit = true;
-                        }, EVREventType.VREvent_Quit);
+                        Event.Register(EVREventType.VREvent_Quit,
+                            (in _) =>
+                            {
+                                // TODO: I think we should always disconnect if the runtime quits
+                                //  OpenVR2WS also indicates it should stop running...
+                                
+                                // TODO: MAKE QUITTING ON STEAM QUIT MANDATORY? PROBABLY?
+                                //  MAYBE ALSO MAKE LAUNCH WITH STEAM DEFAULT?
+                                //  IT SEEMS LIKE A BAD THING TO FORCE STEAMVR TO RELAUNCH REPEATEDLY WHEN NOT BEING A SCENE APP
+                                shouldQuit = true;
+                            }
+                        );
                     }
-                    
+
                     switch (_initParams.PumpInterval)
                     {
                         // When using this pump mode we need to keep track of the headset display frequency.
@@ -211,9 +217,9 @@ public partial class EasyOpenVr
                                 ETrackedDeviceProperty.Prop_DisplayFrequency_Float
                             ));
                             intervalTimeSpan = GetIntervalTimespanFromHmdHz(hmdHz, _initParams.PumpValue);
-                            
+
                             // Registration of listener for change of value
-                            Event.Register((in vrEvent) =>
+                            Event.Register(EVREventType.VREvent_PropertyChanged, (in vrEvent) =>
                             {
                                 if (vrEvent.data.property.prop != ETrackedDeviceProperty.Prop_DisplayFrequency_Float) return;
                                 hmdHz = (int)Math.Round(Device.GetFloatTrackedDeviceProperty(
@@ -221,7 +227,7 @@ public partial class EasyOpenVr
                                     ETrackedDeviceProperty.Prop_DisplayFrequency_Float
                                 ));
                                 intervalTimeSpan = GetIntervalTimespanFromHmdHz(hmdHz, _initParams.PumpValue);
-                            }, EVREventType.VREvent_PropertyChanged);
+                            });
                             break;
                         }
                         case EPumpInterval.FixedHz:
@@ -244,28 +250,30 @@ public partial class EasyOpenVr
 
                     DebugLog(pumpEnabled ? $"Pump interval is: {intervalTimeSpan.TotalMilliseconds}ms" : "Pump is disabled.");
 
-                    Event.Register((in vrEvent) =>
+                    Event.Register(EVREventType.VREvent_TrackedDeviceActivated, (in vrEvent) =>
                         {
                             Data.UpdateInputDeviceHandlesAndIndices();
                             Data.UpdateDeviceClassIndices(vrEvent.trackedDeviceIndex);
-                        },
-                        EVREventType.VREvent_TrackedDeviceActivated
+                        }
                     );
 
-                    Event.Register((in _) =>
+                    Event.Register([
+                            EVREventType.VREvent_TrackedDeviceDeactivated,
+                            EVREventType.VREvent_TrackedDeviceRoleChanged,
+                            EVREventType.VREvent_TrackedDeviceUpdated
+                        ], (in _) =>
                         {
                             Data.UpdateInputDeviceHandlesAndIndices();
                             Data.UpdateDeviceClassIndices();
-                        },
-                        EVREventType.VREvent_TrackedDeviceDeactivated,
-                        EVREventType.VREvent_TrackedDeviceRoleChanged,
-                        EVREventType.VREvent_TrackedDeviceUpdated
+                        }
                     );
 
-                    Event.Register((in ev) =>
-                    {
-                        DebugLog("!!! [NONE] EVENT DETECTED!"); // TODO
-                    }, EVREventType.VREvent_None);
+                    Event.Register(EVREventType.VREvent_None,
+                        (in ev) =>
+                        {
+                            DebugLog("!!! [NONE] EVENT DETECTED!"); // TODO
+                        }
+                    );
 
                     #endregion
                 }
@@ -313,8 +321,16 @@ public partial class EasyOpenVr
             firstInitComplete = false;
             System.AcknowledgeShutdown();
             System.Shutdown();
+            OnState(false);
+            if (_initParams.QuitWithRuntime)
+            {
+                DebugLog("Quitting with runtime, shutting down pump.");
+                return;
+            }
+            
             // TODO: Reset local collections? Rest should be reset in System.Shutdown() above, maybe look that over.
-            Console.WriteLine("Shutting down EasyOpenVR due to SteamVR quitting.");
+            
+            DebugLog("Shutting down EasyOpenVR due to the connected runtime quitting.");
         }
     }
 

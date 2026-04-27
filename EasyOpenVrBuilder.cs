@@ -1,3 +1,4 @@
+using System.Drawing.Imaging.Effects;
 using EasyOpenVR.Data;
 using Software.Boll.EasyUtils;
 using Valve.VR;
@@ -41,20 +42,31 @@ public class EasyOpenVrBuilder
     }
 
     /**
-     * Various application types provide different features.
-     * Most commonly, to enable auto launching Overlay appears important.
+     * Various application types provide different features. Notably:
+     * <li>Background applications will not force a runtime launch, and it will not terminate automatically if the runtime disconnects.</li>
+     * <li>Overlay applications force a runtime launch, and will register for auto-launching and input reading. Requires app manifest and action manifest respectively.</li>
      */
     public EasyOpenVrBuilder SetApplicationType(EVRApplicationType appType)
     {
         _initParams.ApplicationType = appType;
+        switch (appType)
+        {
+            case EVRApplicationType.VRApplication_Overlay: 
+                _initParams.QuitWithRuntime = true;
+                _initParams.RegisterAutoLaunch = true;
+                _initParams.ForceAutoLaunch = true;
+                break;
+        }
         return this;
     }
 
-    /**
-     * Will register the application to launch with the runtime.
-     * Requires a VRAppManifest to have been registered, set the path using this builder.
-     * When forced, it will unregister and re-register to ensure auto-launch registration.
-     */
+
+    /// <summary>
+    /// Will register the application to launch with the runtime.
+    /// Requires a VRAppManifest to have been registered, set the path using this builder.
+    /// When forced, it will unregister and re-register to ensure auto-launch registration.
+    /// <b>Note</b>: Overlay applications will have this on by default, this can be used to override that.
+    /// </summary>
     public EasyOpenVrBuilder SetRegisterAutoLaunch(bool force)
     {
         _initParams.RegisterAutoLaunch = true;
@@ -67,7 +79,7 @@ public class EasyOpenVrBuilder
     /// </summary>
     /// <param name="path">Cannot be used with <c>..</c>, has to be a file in the current folder or a subfolder thereof.</param>
     /// <param name="vrManifest">Provide this to write the manifest to disk if it is missing.</param>
-    /// /// <param name="overwrite">Will overwrite an existing manifest.</param>
+    /// <param name="overwrite">Will overwrite an existing manifest.</param>
     public EasyOpenVrBuilder SetVrAppManifest(string path, VrManifestBuilder? vrManifest = null, bool overwrite = false)
     {
         if (vrManifest != null && (overwrite || !FileUtils.FileExists(path).FileExists))

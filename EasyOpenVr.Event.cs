@@ -15,7 +15,12 @@ public partial class EasyOpenVr
 
         internal readonly Dictionary<EVREventType, List<VrEventHandler>> handlers = [];
 
-        public void Register(VrEventHandler handler, params EVREventType[] types)
+        public void Register(EVREventType type, VrEventHandler handler)
+        {
+            Register([type], handler);
+        }
+
+        public void Register(EVREventType[] types, VrEventHandler handler)
         {
             foreach (var type in types)
             {
@@ -23,11 +28,17 @@ public partial class EasyOpenVr
                 {
                     handlers[type] = list = [];
                 }
+
                 list.Add(handler);
             }
         }
 
-        public void Unregister(VrEventHandler handler, params EVREventType[] types)
+        public void Unregister(EVREventType type, VrEventHandler handler)
+        {
+            Unregister([type], handler);
+        }
+
+        public void Unregister(EVREventType[] types, VrEventHandler handler)
         {
             foreach (var type in types)
             {
