@@ -72,7 +72,7 @@ public class ApplicationBuilder
 
     public ApplicationBuilder AddStrings(string posixLocale, Strings strings)
     {
-        _application.Strings.Add(posixLocale, strings);
+        _application.Strings.Add(SharedUtils.FixLanguageTag(posixLocale), strings);
         return this;
     }
 

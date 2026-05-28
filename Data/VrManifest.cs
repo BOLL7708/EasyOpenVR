@@ -5,13 +5,13 @@ namespace EasyOpenVR.Data;
 
 public class VrManifest
 {
-    public string Source = "";
+    public string Source = string.Empty;
     public List<Application> Applications = [];
 }
 
 public class Application
 {
-    public string AppKey = "";
+    public string AppKey = string.Empty;
     public LaunchTypeEnum LaunchType = LaunchTypeEnum.Binary;
     public string? Url = null;
     public string? BinaryPathWindows = null;

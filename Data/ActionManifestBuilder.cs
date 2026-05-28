@@ -1,9 +1,10 @@
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using Software.Boll.EasyUtils;
 
 namespace EasyOpenVR.Data;
 
-public class ActionManifestBuilder
+public partial class ActionManifestBuilder
 {
     private readonly ActionManifest _actionManifest = new();
 
@@ -62,7 +63,7 @@ public class ActionManifestBuilder
     public ActionManifestBuilder AddLocalization(string languageTag, OrderedDictionary<string, string> prompts)
     {
         prompts.Remove("language_tag"); // To avoid exception on duplicate key
-        prompts.Insert(0, "language_tag", languageTag); // To put this at the top
+        prompts.Insert(0, "language_tag", SharedUtils.FixLanguageTag(languageTag)); // To put this at the top and format
         _actionManifest.Localization.Add(prompts);
         return this;
     }

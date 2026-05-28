@@ -20,16 +20,16 @@ public class ActionManifest
 public class DefaultBindings
 {
     /// This is the name of the controller type that this binding file is for.
-    public string ControllerType = "";
+    public string ControllerType = string.Empty;
     /// The URL or relative file path of the binding config file for this controller type. Relative paths are relative to the action manifest JSON file itself, so files in the same directory only need to provide a filename. Relative paths may not contain ".." , you must load your binding from the same directory as your action file or a sub-directory.
-    public string BindingUrl = "";
+    public string BindingUrl = string.Empty;
 }
 
 /// <a href="https://github.com/ValveSoftware/openvr/wiki/Action-manifest#actions">Reference</a>  
 public class ActionItem
 {
     /// The path to an action. Paths take the form /actions/actionsetname/in/actionname for input actions or /actions/actionsetname/out/actionname for output actions (like haptics.) 
-    public string Name = "";
+    public string Name = string.Empty;
     /// The type of the action. 
     public ActionType Type = ActionType.Boolean;
     /// The degree to which the user should be prompted to bind this action in the binding editor. 
@@ -40,7 +40,7 @@ public class ActionItem
 /// <a href="https://github.com/ValveSoftware/openvr/wiki/Action-manifest#action-sets">Reference</a>  
 public class ActionSet
 {
-    public string Name = "";
+    public string Name = string.Empty;
     public ActionSetUsage Usage = ActionSetUsage.Leftright;
 }
 
