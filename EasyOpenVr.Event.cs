@@ -61,7 +61,7 @@ public partial class EasyOpenVr
             }
             else
             {
-                evr.DebugLog("Unhandled event.");
+                evr.DebugLog($"Unhandled event: {Enum.GetName((EVREventType) vrEventT.eventType)}");
                 // TODO: Output unhandled events somehow?
             }
         }

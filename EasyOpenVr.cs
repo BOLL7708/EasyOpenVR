@@ -84,16 +84,16 @@ public partial class EasyOpenVr
 
     #region Events
 
-    public delegate void DebugMessageHandler(string message);
+    public delegate void DebugMessageHandler(string message, EDebugLevel level);
 
     public event DebugMessageHandler? DebugMessage;
 
     /**
      * Used for mostly all debug handling in the library, to allow monitoring of internal events.
      */
-    private void OnDebugMessage(string message)
+    private void OnDebugMessage(string message, EDebugLevel level)
     {
-        DebugMessage?.Invoke(message);
+        DebugMessage?.Invoke(message, level);
     }
 
     public delegate void StateHandler(bool connected);
@@ -343,7 +343,16 @@ public partial class EasyOpenVr
 
     #region Debug
 
-    private void DebugLog(string message)
+    public enum EDebugLevel
+    {
+        Verbose,
+        Debug,
+        Info,
+        Warning,
+        Error
+    }
+
+    private void DebugLog(string message, EDebugLevel level = EDebugLevel.Verbose)
     {
         if (!_initParams.Debug) return;
 
@@ -351,7 +360,7 @@ public partial class EasyOpenVr
         var stackFrame = stackTrace.GetFrame(1);
         var methodName = stackFrame?.GetMethod()?.Name;
         var text = $"{methodName}: {message}";
-        OnDebugMessage(text);
+        OnDebugMessage(text, level);
     }
 
     private EasyOpenVrResult DebugLog(Enum errorEnum, string message = "error")
@@ -363,7 +372,7 @@ public partial class EasyOpenVr
         var stackFrame = stackTrace.GetFrame(1);
         var methodName = stackFrame?.GetMethod()?.Name;
         var text = $"{methodName} {message}: {result.ErrorType}.{result.ErrorName} ({result.ErrorOrdinal})";
-        OnDebugMessage(text);
+        OnDebugMessage(text, EDebugLevel.Warning);
         result.Message = text;
         return result;
     }
@@ -378,7 +387,7 @@ public partial class EasyOpenVr
         var methodName = stackFrame?.GetMethod()?.Name;
         var text =
             $"{methodName} {result.ValueType}.{result.ValueName}: {result.ErrorType}.{result.ErrorName}";
-        OnDebugMessage(text);
+        OnDebugMessage(text, EDebugLevel.Warning);
         result.Message = text;
         return result;
     }
@@ -392,7 +401,7 @@ public partial class EasyOpenVr
         var methodName = stackFrame?.GetMethod()?.Name;
         var text = $"{methodName} {message}: {e.Message}";
         var result = new EasyOpenVrResult(null, null, text);
-        OnDebugMessage(text);
+        OnDebugMessage(text, EDebugLevel.Error);
         return result;
     }
 
