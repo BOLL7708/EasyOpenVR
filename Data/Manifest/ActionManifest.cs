@@ -1,9 +1,7 @@
 using System.Collections.Generic;
-using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
-using Valve.VR;
 
-namespace EasyOpenVR.Data;
+namespace EasyOpenVR.Data.Manifest;
 
 /// <a href="https://github.com/ValveSoftware/openvr/wiki/Action-manifest">Reference</a>
 public class ActionManifest

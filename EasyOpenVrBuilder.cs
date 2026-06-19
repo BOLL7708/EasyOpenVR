@@ -1,5 +1,4 @@
-using System.Drawing.Imaging.Effects;
-using EasyOpenVR.Data;
+using EasyOpenVR.Data.Manifest;
 using Software.Boll.EasyUtils;
 using Valve.VR;
 
@@ -78,13 +77,13 @@ public class EasyOpenVrBuilder
     /// The VR app manifest is required to register an application for auto launch and input.
     /// </summary>
     /// <param name="path">Cannot be used with <c>..</c>, has to be a file in the current folder or a subfolder thereof.</param>
-    /// <param name="vrManifest">Provide this to write the manifest to disk if it is missing.</param>
+    /// <param name="vrManifestBuilder">Provide this to write the manifest to disk if it is missing.</param>
     /// <param name="overwrite">Will overwrite an existing manifest.</param>
-    public EasyOpenVrBuilder SetVrAppManifest(string path, VrManifestBuilder? vrManifest = null, bool overwrite = false)
+    public EasyOpenVrBuilder SetVrAppManifest(string path, VrManifestBuilder? vrManifestBuilder = null, bool overwrite = false)
     {
-        if (vrManifest != null && (overwrite || !FileUtils.FileExists(path).FileExists))
+        if (vrManifestBuilder != null && (overwrite || !FileUtils.FileExists(path).FileExists))
         {
-            var writeTextResult = FileUtils.WriteText(path, vrManifest.BuildAndSerialize().Json);
+            var writeTextResult = FileUtils.WriteText(path, vrManifestBuilder.BuildAndSerialize().Json);
             if (writeTextResult.Exception != null) throw writeTextResult.Exception;
         }
 
@@ -96,13 +95,13 @@ public class EasyOpenVrBuilder
     /// The action manifest is required for the application to listen to inputs.
     /// </summary>
     /// <param name="path">Cannot be used with <c>..</c>, has to be a file in the current folder or a subfolder thereof.</param>
-    /// <param name="actionManifest">Provide this to write the manifest to disk if it is missing.</param>
+    /// <param name="actionManifestBuilder">Provide this to write the manifest to disk if it is missing.</param>
     /// <param name="overwrite">Will overwrite an existing manifest.</param>
-    public EasyOpenVrBuilder SetActionManifest(string path, ActionManifestBuilder? actionManifest = null, bool overwrite = false)
+    public EasyOpenVrBuilder SetActionManifest(string path, ActionManifestBuilder? actionManifestBuilder = null, bool overwrite = false)
     {
-        if (actionManifest != null && (overwrite || !FileUtils.FileExists(path).FileExists))
+        if (actionManifestBuilder != null && (overwrite || !FileUtils.FileExists(path).FileExists))
         {
-            var writeTextResult = FileUtils.WriteText(path, actionManifest.BuildAndSerialize().Json);
+            var writeTextResult = FileUtils.WriteText(path, actionManifestBuilder.BuildAndSerialize().Json);
             if (writeTextResult.Exception != null) throw writeTextResult.Exception;
         }
 

@@ -1,15 +1,11 @@
-using System;
-using System.Text.Encodings.Web;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using Software.Boll.EasyUtils;
 
-namespace EasyOpenVR.Data;
+namespace EasyOpenVR.Data.Manifest;
 
 public class VrManifestBuilder
 {
     private readonly VrManifest _vrManifest = new();
-    private readonly JsonUtils _jsonUtils = new(new VrManifestJsonSerializerContext());
+    private readonly JsonUtils _jsonUtils = new(new Manifest.VrManifestJsonSerializerContext());
 
     public VrManifestBuilder(string source = "builtin")
     {
@@ -24,7 +20,7 @@ public class VrManifestBuilder
 
     public JsonResult<VrManifest> BuildAndSerialize()
     {
-        var ctx = new VrManifestJsonSerializerContext(JsonSerializerPreset.Options);
+        var ctx = new Manifest.VrManifestJsonSerializerContext(ManifestJsonSerializerPreset.Options);
         var json = new JsonUtils(ctx);
         return json.Serialize(_vrManifest);
     }

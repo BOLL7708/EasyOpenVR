@@ -1,8 +1,7 @@
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
 using Software.Boll.EasyUtils;
 
-namespace EasyOpenVR.Data;
+namespace EasyOpenVR.Data.Manifest;
 
 public partial class ActionManifestBuilder
 {
@@ -90,7 +89,7 @@ public partial class ActionManifestBuilder
 
     public JsonResult<ActionManifest> BuildAndSerialize()
     {
-        var ctx = new ActionManifestJsonSerializerContext(JsonSerializerPreset.Options);
+        var ctx = new Manifest.ActionManifestJsonSerializerContext(ManifestJsonSerializerPreset.Options);
         var json = new JsonUtils(ctx);
         return json.Serialize(_actionManifest);
     }

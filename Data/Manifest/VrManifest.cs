@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-namespace EasyOpenVR.Data;
+namespace EasyOpenVR.Data.Manifest;
 
 public class VrManifest
 {

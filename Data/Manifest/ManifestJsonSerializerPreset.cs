@@ -3,9 +3,9 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace EasyOpenVR.Data;
+namespace EasyOpenVR.Data.Manifest;
 
-public static class JsonSerializerPreset
+public static class ManifestJsonSerializerPreset
 {
     public static JsonSerializerOptions Options => new JsonSerializerOptions
     {
