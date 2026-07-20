@@ -1,5 +1,4 @@
 using System;
-using System.Buffers;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -106,6 +105,18 @@ public partial class EasyOpenVr
     private void OnState(bool connected)
     {
         State?.Invoke(connected);
+    }
+
+    public delegate void PumpCycleHandler(double deltaMs);
+
+    public event PumpCycleHandler? PumpCycle;
+
+    /**
+     * Will trigger on each pump cycle, reporting the delta time in seconds since the last cycle.
+     */
+    private void OnPumpCycle(double delta)
+    {
+        PumpCycle?.Invoke(delta);
     }
 
     #endregion
@@ -287,6 +298,7 @@ public partial class EasyOpenVr
                         continue; // Disabled
                     }
 
+                    OnPumpCycle(stopwatch.Elapsed.TotalSeconds);
                     stopwatch.Restart();
 
                     // LOAD ALL EVENTS - EMIT EVENTS
