@@ -118,7 +118,7 @@ public partial class EasyOpenVr
         {
             OpenVR.Shutdown();
             evr._initState = 0;
-            evr.Event.handlers.Clear();
+            evr.Event.Handlers.Clear();
             evr.Input._inputActions = [];
         }
     }

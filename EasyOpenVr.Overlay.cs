@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Runtime.InteropServices;
@@ -37,6 +38,59 @@ public partial class EasyOpenVr
             return handle;
         }
 
+        /// <summary>
+        /// <para>Creates a dashboard overlay that will be seen in SteamVR with a button to access it.</para>
+        /// <para>The default values for sizes are based on what the Steam overlay used.</para>
+        /// <para>This creates an overlay that by default has mouse input and scroll support.</para>
+        /// </summary>
+        /// <param name="uniqueKey">A unique key for this specific overlay.</param>
+        /// <param name="title">A user-friendly title that will be shown on hover.</param>
+        /// <param name="mainOverlayHandle">Outputs the main overlay handle or zero if failed.</param>
+        /// <param name="thumbnailOverlayHandle">Outputs the thumbnail overlay handle or zero if failed.</param>
+        /// <param name="textureWidth">The texture width, this is used to set the mouse scale.</param>
+        /// <param name="textureHeight">The texture height, this is used to set the mouse scale.</param>
+        /// <param name="overlayWidth">The physical size of the overlay.</param>
+        /// <param name="thumbnailPath">The image that will be used for the button in the dashboard.</param>
+        /// <param name="smoothScroll">Enable smooth scrolling instead of discrete scrolling.</param>
+        /// <returns></returns>
+        public EasyOpenVrResult CreateDashboardOverlay(
+            string uniqueKey,
+            string title,
+            out ulong mainOverlayHandle,
+            out ulong thumbnailOverlayHandle,
+            int textureWidth = 1920,
+            int textureHeight = 1080,
+            float overlayWidth = 2.67f,
+            string thumbnailPath = "",
+            bool smoothScroll = true
+        )
+        {
+            ulong mainHandleLocal = 0;
+            ulong thumbnailHandleLocal = 0;
+            var error = OpenVR.Overlay.CreateDashboardOverlay(uniqueKey, title, ref mainHandleLocal, ref thumbnailHandleLocal);
+            if (error == EVROverlayError.None)
+            {
+                // Without setting mouse scale, the overlay will act like a square, so any non-square overlay will have additional margins.
+                // I presume that it is a logical surface for input detection that is included in the display calculations.
+                var mouseScale = new HmdVector2_t { v0 = textureWidth, v1 = textureHeight };
+                evr.DebugLog(OpenVR.Overlay.SetOverlayMouseScale(mainHandleLocal, ref mouseScale));
+                evr.DebugLog(OpenVR.Overlay.SetOverlayInputMethod(mainHandleLocal, VROverlayInputMethod.Mouse));
+                evr.DebugLog(OpenVR.Overlay.SetOverlayWidthInMeters(mainHandleLocal, overlayWidth));
+                evr.DebugLog(OpenVR.Overlay.SetOverlayFlag(mainHandleLocal, VROverlayFlags.EnableControlBarKeyboard, true));
+                evr.DebugLog(OpenVR.Overlay.SetOverlayFlag(mainHandleLocal, smoothScroll
+                        ? VROverlayFlags.SendVRSmoothScrollEvents
+                        : VROverlayFlags.SendVRDiscreteScrollEvents,
+                    true)
+                );
+                evr.DebugLog(OpenVR.Overlay.SetOverlayFlag(mainHandleLocal, VROverlayFlags.ShowTouchPadScrollWheel, true));
+                if (!string.IsNullOrWhiteSpace(thumbnailPath)) OpenVR.Overlay.SetOverlayFromFile(thumbnailHandleLocal, thumbnailPath);
+            }
+
+            mainOverlayHandle = mainHandleLocal;
+            thumbnailOverlayHandle = thumbnailHandleLocal;
+            return evr.DebugLog(error);
+        }
+
         public EasyOpenVrResult SetOverlayTransform(ulong handle, HmdMatrix34_t transform, uint anchor = uint.MaxValue,
             ETrackingUniverseOrigin origin = ETrackingUniverseOrigin.TrackingUniverseStanding)
         {
@@ -54,7 +108,7 @@ public partial class EasyOpenVr
         }
 
         /// <summary>
-        /// Preliminiary as I have yet to figure out how to make my own textures at runtime.
+        /// Preliminary as I have yet to figure out how to make my own textures at runtime.
         /// </summary>
         /// <param name="handle"></param>
         /// <param name="texture"></param>
@@ -117,6 +171,33 @@ public partial class EasyOpenVr
             return evr.DebugLog(error);
         }
 
+        /// <summary>
+        /// <para>Will display a direct mode keyboard, that is one that submits characters immediately.</para>
+        /// <para>Technically it is running a mininmal modal keyboard with arrow keys enabled.</para>
+        /// <para>Because it is minimal, there is no output buffer, so multiline is always on and input mode is always normal. The rest of the parameters are unused.</para>
+        /// </summary>
+        /// <param name="handle">The handle for the overlay that is receiving the input.</param>
+        /// <returns></returns>
+        public EasyOpenVrResult ShowDirectModeKeyboard(ulong handle)
+        {
+            return evr.DebugLog(OpenVR.Overlay.ShowKeyboardForOverlay(
+                handle,
+                (int)EGamepadTextInputMode.k_EGamepadTextInputModeNormal,
+                (int)EGamepadTextInputLineMode.k_EGamepadTextInputLineModeMultipleLines,
+                (int)EKeyboardFlags.KeyboardFlag_Minimal + (int)EKeyboardFlags.KeyboardFlag_Modal + (int)EKeyboardFlags.KeyboardFlag_ShowArrowKeys,
+                "",
+                0,
+                "",
+                0
+            ));
+        }
+
+        public void HideKeyboard()
+        {
+            OpenVR.Overlay.HideKeyboard();
+        }
+
+        #region Events
         /**
          * Will have to explore this at a later date, right now my overlays are non-interactive.
          */
@@ -130,8 +211,62 @@ public partial class EasyOpenVr
                 vrEvents.Add(vrEvent);
             }
 
-            return vrEvents.ToArray();
+            return [.. vrEvents];
         }
+
+        public delegate void VrOverlayInputHandler(in VREvent_t e);
+
+        internal readonly Dictionary<ulong, List<VrOverlayInputHandler>> Handlers = [];
+
+        public void RegisterForOverlayEvents(ulong handle, VrOverlayInputHandler handler)
+        {
+            if (!Handlers.TryGetValue(handle, out var list))
+            {
+                Handlers[handle] = list = [];
+            }
+
+            list.Add(handler);
+        }
+
+        public void LoadAllNewEvents()
+        {
+            foreach (var handle in Handlers.Keys)
+            {
+                LoadNewEvents(handle);
+            }
+        }
+
+        public void LoadNewEvents(ulong handle)
+        {
+            var vrEvent = new VREvent_t();
+            try
+            {
+                while (OpenVR.Overlay.PollNextOverlayEvent(handle, ref vrEvent, evr.Event.VrEventTSize))
+                {
+                    OnInputEvent(handle, ref vrEvent);
+                }
+            }
+            catch (Exception e)
+            {
+                evr.DebugLog(e, "Could not get new overlay events");
+            }
+        }
+
+        public void OnInputEvent(ulong handle, ref readonly VREvent_t vrEvent)
+        {
+            if (Handlers.TryGetValue(handle, out var list))
+            {
+                foreach (var handler in CollectionsMarshal.AsSpan(list))
+                {
+                    handler(in vrEvent);
+                }
+            }
+            else
+            {
+                evr.DebugLog($"Unhandled overlay event for handle({handle}): {Enum.GetName((EVREventType)vrEvent.eventType)}");
+            }
+        }
+        #endregion
 
         public ulong FindOverlay(string uniqueKey)
         {

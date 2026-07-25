@@ -304,6 +304,9 @@ public partial class EasyOpenVr
                     // LOAD ALL EVENTS - EMIT EVENTS
                     Event.LoadAllNew();
                     // - ACT ON CERTAIN EVENTS TO RELOAD LISTS, ROLES, EXIT, ETC, THINGS USED IN OTHER FEATURES BELOW
+
+                    Overlay.LoadAllNewEvents();
+                    
                     // LOAD POSES - EMIT EVENTS
                     // LOAD INPUTS - EMIT EVENTS
                     // LOAD STATISTICS - EMIT EVENTS

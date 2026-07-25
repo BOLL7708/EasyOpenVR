@@ -138,8 +138,8 @@ public partial class EasyOpenVr
             public ulong sourceHandle;
         }
 
-        internal List<InputAction> _inputActions = new List<InputAction>();
-        private List<VRActiveActionSet_t> _inputActionSets = new List<VRActiveActionSet_t>();
+        internal List<InputAction> _inputActions = [];
+        private readonly List<VRActiveActionSet_t> _inputActionSets = [];
 
         /**
          * Load the actions manifest to register actions for the application
@@ -177,7 +177,7 @@ public partial class EasyOpenVr
             if (handle != 0 && error == EVRInputError.None)
             {
                 ia.handle = handle;
-                ia.pathEnd = pathParts[pathParts.Length - 1];
+                ia.pathEnd = pathParts[^1];
                 _inputActions.Add(ia);
             }
             else evr.DebugLog(error);
@@ -266,10 +266,10 @@ public partial class EasyOpenVr
          */
         public ulong GetInputSourceHandle(InputSource inputSource)
         {
-            DescriptionAttribute[] attributes = (DescriptionAttribute[])inputSource
+            var attributes = (DescriptionAttribute[]) (inputSource
                 .GetType()
                 .GetField(inputSource.ToString())
-                .GetCustomAttributes(typeof(DescriptionAttribute), false);
+                ?.GetCustomAttributes(typeof(DescriptionAttribute), false) ?? []);
             var source = attributes.Length > 0 ? attributes[0].Description : string.Empty;
 
             ulong handle = 0;
@@ -279,17 +279,18 @@ public partial class EasyOpenVr
         }
 
 
-        /**
-         * Update all action states, this will trigger stored actions if needed.
-         * Digital actions triggers on change, analog actions every update.
-         * OBS: Only run this once per update, or you'll get no input data at all.
-         */
+        /// <summary>
+        /// Update all action states, this will trigger stored actions if needed.
+        /// <para>Digital actions triggers on change, analog actions every update.</para>
+        /// </summary>
+        /// <b>OBS</b>: Only run this once per update, or you'll get no input data at all.
+        /// <returns></returns>
         public EasyOpenVrResult UpdateActionStates(ulong[] inputSourceHandles, ulong skeletonSummaryInputSourceHandle)
         {
             if (inputSourceHandles.Length == 0) inputSourceHandles = [OpenVR.k_ulInvalidPathHandle];
             var error = OpenVR.Input.UpdateActionState(
-                _inputActionSets.ToArray(),
-                (uint)Marshal.SizeOf(typeof(VRActiveActionSet_t))
+                [.. _inputActionSets],
+                (uint)Marshal.SizeOf<VRActiveActionSet_t>()
             );
             _inputActions.ForEach((InputAction action) =>
             {
@@ -324,7 +325,7 @@ public partial class EasyOpenVr
         private EasyOpenVrResult GetAnalogAction(InputAction inputAction, ulong inputSourceHandle)
         {
             if (inputAction.isChord) inputSourceHandle = 0;
-            var size = (uint)Marshal.SizeOf(typeof(InputAnalogActionData_t));
+            var size = (uint)Marshal.SizeOf<InputAnalogActionData_t>();
             var data = (InputAnalogActionData_t)inputAction.data;
             var error = OpenVR.Input.GetAnalogActionData(inputAction.handle, ref data, size, inputSourceHandle);
             var action = ((Action<InputAnalogActionData_t, InputActionInfo>)inputAction.action);
@@ -335,7 +336,7 @@ public partial class EasyOpenVr
         private EasyOpenVrResult GetDigitalAction(InputAction inputAction, ulong inputSourceHandle)
         {
             if (inputAction.isChord) inputSourceHandle = 0;
-            var size = (uint)Marshal.SizeOf(typeof(InputDigitalActionData_t));
+            var size = (uint)Marshal.SizeOf<InputDigitalActionData_t>();
             var data = (InputDigitalActionData_t)inputAction.data;
             var error = OpenVR.Input.GetDigitalActionData(inputAction.handle, ref data, size, inputSourceHandle);
             var action = ((Action<InputDigitalActionData_t, InputActionInfo>)inputAction.action);
@@ -346,7 +347,7 @@ public partial class EasyOpenVr
         private EasyOpenVrResult GetPoseAction(InputAction inputAction, ulong inputSourceHandle)
         {
             if (inputAction.isChord) inputSourceHandle = 0;
-            var size = (uint)Marshal.SizeOf(typeof(InputPoseActionData_t));
+            var size = (uint)Marshal.SizeOf<InputPoseActionData_t>();
             var data = (InputPoseActionData_t)inputAction.data;
             var error = OpenVR.Input.GetPoseActionDataRelativeToNow(inputAction.handle,
                 ETrackingUniverseOrigin.TrackingUniverseStanding, 0f, ref data, size, inputSourceHandle);
