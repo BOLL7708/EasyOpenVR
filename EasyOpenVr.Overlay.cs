@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using EasyOpenVR.Utils;
+using Hexa.NET.StbImage;
 using Valve.VR;
 
 namespace EasyOpenVR;
@@ -51,6 +52,7 @@ public partial class EasyOpenVr
         /// <param name="textureHeight">The texture height, this is used to set the mouse scale.</param>
         /// <param name="overlayWidth">The physical size of the overlay.</param>
         /// <param name="thumbnailPath">The image that will be used for the button in the dashboard.</param>
+        /// <param name="thumbnailBytes">The PNG bytes for the image to be used for the dashboard button.</param>
         /// <param name="smoothScroll">Enable smooth scrolling instead of discrete scrolling.</param>
         /// <returns></returns>
         public EasyOpenVrResult CreateDashboardOverlay(
@@ -62,6 +64,7 @@ public partial class EasyOpenVr
             int textureHeight = 1080,
             float overlayWidth = 2.67f,
             string thumbnailPath = "",
+            byte[]? thumbnailBytes = null,
             bool smoothScroll = true
         )
         {
@@ -83,7 +86,14 @@ public partial class EasyOpenVr
                     true)
                 );
                 evr.DebugLog(OpenVR.Overlay.SetOverlayFlag(mainHandleLocal, VROverlayFlags.ShowTouchPadScrollWheel, true));
-                if (!string.IsNullOrWhiteSpace(thumbnailPath)) OpenVR.Overlay.SetOverlayFromFile(thumbnailHandleLocal, thumbnailPath);
+                if (!string.IsNullOrWhiteSpace(thumbnailPath))
+                {
+                    OpenVR.Overlay.SetOverlayFromFile(thumbnailHandleLocal, thumbnailPath);
+                }
+                else if (thumbnailBytes is { Length: > 0 })
+                {
+                    SetOverlayTextureFromBytes(thumbnailHandleLocal, thumbnailBytes);
+                }
             }
 
             mainOverlayHandle = mainHandleLocal;
@@ -104,6 +114,41 @@ public partial class EasyOpenVr
         public EasyOpenVrResult SetOverlayTextureFromFile(ulong handle, string path)
         {
             var error = OpenVR.Overlay.SetOverlayFromFile(handle, path);
+            return evr.DebugLog(error);
+        }
+
+        /// <summary>
+        /// Will set raw bytes as the texture of an overlay.
+        /// </summary>
+        /// <param name="handle">The handle of the overlay to update.</param>
+        /// <param name="bytes">The bytes of a PNG image.</param>
+        /// <returns></returns>
+        public unsafe EasyOpenVrResult SetOverlayTextureFromBytes(ulong handle, byte[] bytes)
+        {
+            var error = EVROverlayError.InvalidTexture;
+            fixed (byte* bytesPointer = bytes)
+            {
+                int width, height, channels;
+                var pixels = StbImage.LoadFromMemory(bytesPointer, bytes.Length, &width, &height, &channels, 4);
+                if (pixels != null)
+                {
+                    error = OpenVR.Overlay.SetOverlayRaw(
+                        handle,
+                        (IntPtr)pixels,
+                        (uint)width,
+                        (uint)height,
+                        4); // bytes per pixel = RGBA
+                    StbImage.ImageFree(pixels);
+                }
+                else
+                {
+                    var reason = Marshal.PtrToStringAnsi((IntPtr)StbImage.FailureReason());
+                    evr.DebugLog($"Overlay: StbImage decode FAILED: {reason}", EDebugLevel.Error);
+                }
+
+                Console.WriteLine($"SET OVERLAY TEXTURE FROM [{bytes.Length}, {width}x{height}] BYTES: {Enum.GetName(typeof(EVROverlayError), error)}");
+            }
+
             return evr.DebugLog(error);
         }
 
@@ -198,6 +243,7 @@ public partial class EasyOpenVr
         }
 
         #region Events
+
         /**
          * Will have to explore this at a later date, right now my overlays are non-interactive.
          */
@@ -266,6 +312,7 @@ public partial class EasyOpenVr
                 evr.DebugLog($"Unhandled overlay event for handle({handle}): {Enum.GetName((EVREventType)vrEvent.eventType)}");
             }
         }
+
         #endregion
 
         public ulong FindOverlay(string uniqueKey)
