@@ -338,5 +338,18 @@ public partial class EasyOpenVr
                 ? new OverlayTextureSize()
                 : new OverlayTextureSize { width = width, height = height, aspectRatio = (float)width / (float)height };
         }
+
+        /// <summary>
+        /// Triggers a haptic pulse for the controller that is doing the laser beam.
+        /// Default values matches the SteamVR dashboard hover effects.
+        /// </summary>
+        /// <param name="handle"></param>
+        /// <param name="durationSeconds"></param>
+        /// <param name="frequency"></param>
+        /// <param name="amplitude"></param>
+        public void TriggerHapticVibration(ulong handle, float durationSeconds = 0, float frequency = 1f, float amplitude = 0.16f)
+        {
+            OpenVR.Overlay.TriggerLaserMouseHapticVibration(handle, durationSeconds, frequency, amplitude);
+        }
     }
 }
