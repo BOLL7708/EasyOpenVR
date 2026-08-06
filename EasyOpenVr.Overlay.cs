@@ -143,10 +143,8 @@ public partial class EasyOpenVr
                 else
                 {
                     var reason = Marshal.PtrToStringAnsi((IntPtr)StbImage.FailureReason());
-                    evr.DebugLog($"Overlay: StbImage decode FAILED: {reason}", EDebugLevel.Error);
-                }
-
-                Console.WriteLine($"SET OVERLAY TEXTURE FROM [{bytes.Length}, {width}x{height}] BYTES: {Enum.GetName(typeof(EVROverlayError), error)}");
+                    evr.DebugLog($"StbImage decode FAILED: {reason}", EDebugLevel.Error);
+                } 
             }
 
             return evr.DebugLog(error);
