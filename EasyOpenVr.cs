@@ -190,7 +190,7 @@ public partial class EasyOpenVr
 
                     if (_initParams.VrAppManifestPath is { Length: > 0 })
                     {
-                        System.LoadAppManifest(_initParams.VrAppManifestPath);
+                        System.AddAppManifest(_initParams.VrAppManifestPath);
                         // TODO: Look over the auto-launch stuff in the call to System... it's a mess.
                     }
 

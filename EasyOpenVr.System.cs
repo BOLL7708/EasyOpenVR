@@ -11,11 +11,11 @@ public partial class EasyOpenVr
     public class SystemMethods(EasyOpenVr evr)
     {
         /**
-         * Load an app manifest for the application
+         * Add an app manifest for the application
          * Pretty sure this is required to show up in the input bindings interface
          * OBS: Make sure the encoding is UTF8 and not UTF8+BOM
          */
-        public EasyOpenVrResult LoadAppManifest(string relativePath)
+        public EasyOpenVrResult AddAppManifest(string relativePath)
         {
             var error = OpenVR.Applications.AddApplicationManifest(Path.GetFullPath(relativePath), false);
             return evr.DebugLog(error);
@@ -24,6 +24,14 @@ public partial class EasyOpenVr
         public EasyOpenVrResult RemoveAppManifest(string relativePath)
         {
             var error = OpenVR.Applications.RemoveApplicationManifest(Path.GetFullPath(relativePath));
+            return evr.DebugLog(error);
+        }
+
+        public EasyOpenVrResult SetAutoLaunch(string appKey, bool autoLaunch)
+        {
+            var installed = OpenVR.Applications.IsApplicationInstalled(appKey);
+            if (!installed) return new EasyOpenVrResult(null, null, "To active autolaunch the application needs to be installed by registering an application manifest.");
+            var error = OpenVR.Applications.SetApplicationAutoLaunch(appKey, autoLaunch);
             return evr.DebugLog(error);
         }
 
