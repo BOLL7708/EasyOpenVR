@@ -240,6 +240,11 @@ public partial class EasyOpenVr
             OpenVR.Overlay.HideKeyboard();
         }
 
+        public EasyOpenVrResult DestroyOverlay(ulong handle)
+        {
+            return evr.DebugLog(OpenVR.Overlay.DestroyOverlay(handle));
+        }
+
         #region Events
 
         /**

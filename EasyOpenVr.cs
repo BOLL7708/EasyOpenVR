@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection.Metadata.Ecma335;
 using System.Threading;
 using System.Threading.Tasks;
 using Valve.VR;
@@ -27,11 +28,8 @@ public partial class EasyOpenVr
         string? VrAppManifestPath,
         string? ActionManifestPath,
         bool Debug,
-        bool RegisterAutoLaunch,
-        bool ForceAutoLaunch,
         EPumpInterval PumpInterval,
-        double PumpValue,
-        bool QuitWithRuntime
+        double PumpValue
         // TODO: Add stuff for input actions? Are they one-time only set-at-start stuff? Figure this out.
     )
     {
@@ -43,6 +41,16 @@ public partial class EasyOpenVr
         FractionOfHmdHz,
         FixedHz,
         Millisecond
+    }
+
+    public enum EState
+    {
+        Idle,
+        ConnectedToSteamVr,
+        FailedToConnectToSteamVr,
+        InitializingPump,
+        RunningPump,
+        ReadyToShutdown
     }
 
     public record struct EasyOpenVrResult(
@@ -82,7 +90,6 @@ public partial class EasyOpenVr
     private readonly Random _random = new();
 
     #region Events
-
     public delegate void DebugMessageHandler(string message, EDebugLevel level);
 
     public event DebugMessageHandler? DebugMessage;
@@ -95,16 +102,16 @@ public partial class EasyOpenVr
         DebugMessage?.Invoke(message, level);
     }
 
-    public delegate void StateHandler(bool connected);
+    public delegate void StateHandler(EState state);
 
     public event StateHandler? State;
 
     /**
      * Will trigger when the running state is changed.
      */
-    private void OnState(bool connected)
+    private void OnState(EState state)
     {
-        State?.Invoke(connected);
+        State?.Invoke(state);
     }
 
     public delegate void PumpCycleHandler(double deltaMs);
@@ -127,6 +134,7 @@ public partial class EasyOpenVr
 
     private bool Init()
     {
+        OnState(EState.Idle);
         var error = EVRInitError.Unknown;
         var oldState = _initState;
         try
@@ -139,7 +147,7 @@ public partial class EasyOpenVr
         }
 
         var connected = error == EVRInitError.None && _initState > 0;
-        if (_initState != oldState) OnState(connected);
+        if (_initState != oldState) OnState(connected ? EState.ConnectedToSteamVr : EState.FailedToConnectToSteamVr);
         DebugLog(error);
         return connected;
     }
@@ -154,6 +162,7 @@ public partial class EasyOpenVr
     #region Worker
 
     private Thread? _workerThread;
+    private bool _hasAcknowledgedShutdown = false;
 
     internal void InitWorkerThread()
     {
@@ -173,7 +182,8 @@ public partial class EasyOpenVr
         Thread.CurrentThread.IsBackground = true;
         var hmdHz = 0;
         var firstInitComplete = false;
-        var shouldQuit = false;
+        var beginShutdown = false;
+        var continueShutdown = false;
         var pumpEnabled = true;
         var intervalTimeSpan = TimeSpan.FromMicroseconds(1_000_000);
         var stopwatch = new Stopwatch();
@@ -186,6 +196,7 @@ public partial class EasyOpenVr
 
                 if (!firstInitComplete)
                 {
+                    OnState(EState.InitializingPump);
                     firstInitComplete = true;
 
                     if (_initParams.VrAppManifestPath is { Length: > 0 })
@@ -198,22 +209,18 @@ public partial class EasyOpenVr
                     {
                         Input.LoadActionManifest(_initParams.ActionManifestPath);
                     }
+                    
+                    Event.Register(EVREventType.VREvent_Quit, (in _) =>
+                        {
+                            beginShutdown = true;
+                        }
+                    );
 
-                    if (_initParams.QuitWithRuntime)
-                    {
-                        Event.Register(EVREventType.VREvent_Quit,
-                            (in _) =>
-                            {
-                                // TODO: I think we should always disconnect if the runtime quits
-                                //  OpenVR2WS also indicates it should stop running...
-                                
-                                // TODO: MAKE QUITTING ON STEAM QUIT MANDATORY? PROBABLY?
-                                //  MAYBE ALSO MAKE LAUNCH WITH STEAM DEFAULT?
-                                //  IT SEEMS LIKE A BAD THING TO FORCE STEAMVR TO RELAUNCH REPEATEDLY WHEN NOT BEING A SCENE APP
-                                shouldQuit = true;
-                            }
-                        );
-                    }
+                    Event.Register(EVREventType.VREvent_QuitAcknowledged, (in _) =>
+                        {
+                            continueShutdown = true;
+                        }
+                    );
 
                     switch (_initParams.PumpInterval)
                     {
@@ -286,6 +293,8 @@ public partial class EasyOpenVr
                         }
                     );
 
+                    OnState(EState.RunningPump);
+                    
                     #endregion
                 }
                 else
@@ -331,24 +340,25 @@ public partial class EasyOpenVr
                 #endregion
             }
 
-            if (!shouldQuit) continue;
-            shouldQuit = false;
-            firstInitComplete = false;
-            System.AcknowledgeShutdown();
-            System.Shutdown();
-            OnState(false);
-            if (_initParams.QuitWithRuntime)
-            {
-                DebugLog("Quitting with runtime, shutting down pump.");
-                return;
+            if (!beginShutdown) continue; // Quit event
+            
+            if (!_hasAcknowledgedShutdown) {
+                System.AcknowledgeShutdown();
+                _hasAcknowledgedShutdown = true;
             }
             
-            // TODO: Reset local collections? Rest should be reset in System.Shutdown() above, maybe look that over.
+            if (!continueShutdown) continue; // Quit Acknowledged event
             
-            DebugLog("Shutting down EasyOpenVR due to the connected runtime quitting.");
+            break;
         }
+        OnState(EState.ReadyToShutdown);
     }
 
+    public void Shutdown()
+    {
+        System.Shutdown();
+    }
+    
     private static TimeSpan GetIntervalTimespanFromHmdHz(int hmdHz, double fraction = 1.0)
     {
         return TimeSpan.FromMicroseconds(1_000_000.0 / hmdHz * fraction);

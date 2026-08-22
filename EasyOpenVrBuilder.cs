@@ -48,28 +48,6 @@ public class EasyOpenVrBuilder
     public EasyOpenVrBuilder SetApplicationType(EVRApplicationType appType)
     {
         _initParams.ApplicationType = appType;
-        switch (appType)
-        {
-            case EVRApplicationType.VRApplication_Overlay: 
-                _initParams.QuitWithRuntime = true;
-                _initParams.RegisterAutoLaunch = true;
-                _initParams.ForceAutoLaunch = true;
-                break;
-        }
-        return this;
-    }
-
-
-    /// <summary>
-    /// Will register the application to launch with the runtime.
-    /// Requires a VRAppManifest to have been registered, set the path using this builder.
-    /// When forced, it will unregister and re-register to ensure auto-launch registration.
-    /// <b>Note</b>: Overlay applications will have this on by default, this can be used to override that.
-    /// </summary>
-    public EasyOpenVrBuilder SetRegisterAutoLaunch(bool force)
-    {
-        _initParams.RegisterAutoLaunch = true;
-        _initParams.ForceAutoLaunch = force;
         return this;
     }
 
@@ -129,12 +107,6 @@ public class EasyOpenVrBuilder
         _initParams.PumpValue = pumpValue;
         return this;
     }
-
-    public EasyOpenVrBuilder QuitWithRuntime()
-    {
-        _initParams.QuitWithRuntime = true;
-        return this;
-    }
-
+    
     #endregion
 }
