@@ -1,16 +1,18 @@
+using System;
 using System.Collections.Generic;
 using Software.Boll.EasyUtils;
 
 namespace EasyOpenVR.Data.Manifest;
 
-public partial class ActionManifestBuilder
+public class ActionManifestBuilder
 {
-    private readonly ActionManifest _actionManifest = new();
+    internal const string FallbackLanguage = "en_US";
+    internal readonly ActionManifest ActionManifest = new();
 
     public ActionManifestBuilder AddVersion(int version, int minimumRequiredVersion)
     {
-        _actionManifest.Version = version;
-        _actionManifest.MinimumRequiredVersion = minimumRequiredVersion;
+        ActionManifest.Version = version;
+        ActionManifest.MinimumRequiredVersion = minimumRequiredVersion;
         return this;
     }
 
@@ -21,34 +23,71 @@ public partial class ActionManifestBuilder
             ControllerType = type,
             BindingUrl = url
         };
-        _actionManifest.DefaultBindings.Add(defaultBindings);
+        ActionManifest.DefaultBindings.Add(defaultBindings);
         return this;
     }
 
     /// <summary>
+    /// The <c>name</c> is the path of the action set.
+    /// Action set names are of the form <c>/actions/actionsetname</c>
+    /// </summary>
+    /// <param name="namePath"></param>
+    /// <param name="usage"></param>
+    /// <param name="configure"></param>
+    /// <returns></returns>
+    public ActionManifestBuilder AddActionSet(
+        string[] namePath,
+        ActionSetUsage usage,
+        Action<ActionSetBuilder>? configure = null
+    )
+    {
+        var actionSet = new ActionSet
+        {
+            Name = $"/{string.Join('/', namePath)}",
+            Usage = usage
+        };
+        ActionManifest.ActionSets.Add(actionSet);
+        configure?.Invoke(new ActionSetBuilder(this, actionSet));
+        return this;
+    }
+
+    public JsonResult<ActionManifest> BuildAndSerialize()
+    {
+        var ctx = new ActionManifestJsonSerializerContext(ManifestJsonSerializerPreset.Options);
+        var json = new JsonUtils(ctx);
+        return json.Serialize(ActionManifest);
+    }
+}
+
+public class ActionSetBuilder(ActionManifestBuilder root, ActionSet parent)
+{
+    /// <summary>
     /// The <c>name</c> is the path to an action.
     /// Paths take the form <c>/actions/actionsetname/in/actionname</c> for input actions or <c>/actions/actionsetname/out/actionname</c> for output actions (like haptics).
     /// </summary>
-    /// <param name="name"></param> 
+    /// <param name="namePath"></param> 
     /// <param name="type"></param>
     /// <param name="requirement"></param>
     /// <param name="skeleton"></param>
+    /// <param name="configure"></param>
     /// <returns></returns>
-    public ActionManifestBuilder AddAction(
-        string name,
+    public ActionSetBuilder AddAction(
+        string[] namePath,
         ActionType type,
         ActionRequirement? requirement = null,
-        ActionSkeleton? skeleton = null
+        ActionSkeleton? skeleton = null,
+        Action<ActionBuilder>? configure = null
     )
     {
         var actionItem = new ActionItem
         {
-            Name = name,
+            Name = $"{parent.Name}/{string.Join('/', namePath)}",
             Type = type,
             Requirement = requirement,
             Skeleton = skeleton
         };
-        _actionManifest.Actions.Add(actionItem);
+        root.ActionManifest.Actions.Add(actionItem);
+        configure?.Invoke(new ActionBuilder(root, actionItem));
         return this;
     }
 
@@ -57,40 +96,36 @@ public partial class ActionManifestBuilder
     /// <para>All localization entries use the path of the action or action set as the key and the localized string as the value. These strings will be shown to the user instead of the action or action set name whenever the user is using that language. If the user's language is not present, English strings will be used. Steam supports over 25 languages, users have come to expect that Applications present details in their native language.</para>
     /// </summary>
     /// <param name="languageTag"></param>
-    /// <param name="prompts"></param>
+    /// <param name="prompt"></param>
     /// <returns></returns>
-    public ActionManifestBuilder AddLocalization(string languageTag, OrderedDictionary<string, string> prompts)
+    public ActionSetBuilder AddLocalization(string languageTag, string prompt)
     {
-        prompts.Remove("language_tag"); // To avoid exception on duplicate key
-        prompts.Insert(0, "language_tag", SharedUtils.FixLanguageTag(languageTag)); // To put this at the top and format
-        _actionManifest.Localization.Add(prompts);
-        return this;
-    }
-
-    /// <summary>
-    /// The <c>name</c> is the path of the action set.
-    /// Action set names are of the form <c>/actions/actionsetname</c>
-    /// </summary>
-    /// <param name="name"></param>
-    /// <param name="usage"></param>
-    /// <returns></returns>
-    public ActionManifestBuilder AddActionSet(string name, ActionSetUsage usage)
-    {
-        var actionSet = new ActionSet
+        var fixedLanguageTag = SharedUtils.FixLanguageTag(languageTag, ActionManifestBuilder.FallbackLanguage);
+        var od = root.ActionManifest.Localization.Find(it => it.ContainsKey("language_tag") && it["language_tag"] == fixedLanguageTag);
+        if (od == null)
         {
-            Name = name,
-            Usage = usage
-        };
-        _actionManifest.ActionSets.Add(actionSet);
+            od = new OrderedDictionary<string, string> { { "language_tag", fixedLanguageTag } };
+            root.ActionManifest.Localization.Add(od);
+        }
+
+        od.Add(parent.Name, prompt);
         return this;
     }
+}
 
-    //  add Localization
-
-    public JsonResult<ActionManifest> BuildAndSerialize()
+public class ActionBuilder(ActionManifestBuilder root, ActionItem parent)
+{
+    public ActionBuilder AddLocalization(string languageTag, string prompt)
     {
-        var ctx = new Manifest.ActionManifestJsonSerializerContext(ManifestJsonSerializerPreset.Options);
-        var json = new JsonUtils(ctx);
-        return json.Serialize(_actionManifest);
+        var fixedLanguageTag = SharedUtils.FixLanguageTag(languageTag, ActionManifestBuilder.FallbackLanguage);
+        var od = root.ActionManifest.Localization.Find(it => it.ContainsKey("language_tag") && it["language_tag"] == fixedLanguageTag);
+        if (od == null)
+        {
+            od = new OrderedDictionary<string, string> { { "language_tag", fixedLanguageTag } };
+            root.ActionManifest.Localization.Add(od);
+        }
+
+        od.Add(parent.Name, prompt);
+        return this;
     }
 }

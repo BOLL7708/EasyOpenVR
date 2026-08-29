@@ -4,6 +4,7 @@ namespace EasyOpenVR.Data.Manifest;
 
 public class VrManifestBuilder
 {
+    internal const string FallbackLanguage = "en_us";
     private readonly VrManifest _vrManifest = new();
     private readonly JsonUtils _jsonUtils = new(new Manifest.VrManifestJsonSerializerContext());
 
@@ -68,7 +69,7 @@ public class ApplicationBuilder
 
     public ApplicationBuilder AddStrings(string posixLocale, Strings strings)
     {
-        _application.Strings.Add(SharedUtils.FixLanguageTag(posixLocale), strings);
+        _application.Strings.Add(SharedUtils.FixLanguageTag(posixLocale, VrManifestBuilder.FallbackLanguage, true), strings);
         return this;
     }
 
