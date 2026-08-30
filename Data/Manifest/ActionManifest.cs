@@ -60,6 +60,14 @@ public enum ActionType
     Skeleton
 }
 
+public enum ActionDirection
+{
+    /// Inputs, e.g. buttons and sticks.
+    In,
+    /// Output, i.e. haptics.
+    Out
+}
+
 public enum ActionSetUsage
 {
     /// The user will see left and right hand controllers and be able to bind each one independently.

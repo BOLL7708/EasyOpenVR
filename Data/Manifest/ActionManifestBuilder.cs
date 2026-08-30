@@ -31,19 +31,19 @@ public class ActionManifestBuilder
     /// The <c>name</c> is the path of the action set.
     /// Action set names are of the form <c>/actions/actionsetname</c>
     /// </summary>
-    /// <param name="namePath"></param>
+    /// <param name="name"></param>
     /// <param name="usage"></param>
     /// <param name="configure"></param>
     /// <returns></returns>
     public ActionManifestBuilder AddActionSet(
-        string[] namePath,
+        string name,
         ActionSetUsage usage,
         Action<ActionSetBuilder>? configure = null
     )
     {
         var actionSet = new ActionSet
         {
-            Name = $"/{string.Join('/', namePath)}",
+            Name = $"/actions/{name.ToLowerInvariant()}",
             Usage = usage
         };
         ActionManifest.ActionSets.Add(actionSet);
@@ -65,23 +65,25 @@ public class ActionSetBuilder(ActionManifestBuilder root, ActionSet parent)
     /// The <c>name</c> is the path to an action.
     /// Paths take the form <c>/actions/actionsetname/in/actionname</c> for input actions or <c>/actions/actionsetname/out/actionname</c> for output actions (like haptics).
     /// </summary>
-    /// <param name="namePath"></param> 
+    /// <param name="name"></param> 
     /// <param name="type"></param>
+    /// <param name="direction"></param>
     /// <param name="requirement"></param>
     /// <param name="skeleton"></param>
     /// <param name="configure"></param>
     /// <returns></returns>
     public ActionSetBuilder AddAction(
-        string[] namePath,
-        ActionType type,
-        ActionRequirement? requirement = null,
+        string name,
+        ActionType type = ActionType.Boolean,
+        ActionDirection direction = ActionDirection.In,
+        ActionRequirement requirement = ActionRequirement.Suggested,
         ActionSkeleton? skeleton = null,
         Action<ActionBuilder>? configure = null
     )
     {
         var actionItem = new ActionItem
         {
-            Name = $"{parent.Name}/{string.Join('/', namePath)}",
+            Name = $"{parent.Name}/{Enum.GetName(direction)?.ToLowerInvariant()}/{name}",
             Type = type,
             Requirement = requirement,
             Skeleton = skeleton
