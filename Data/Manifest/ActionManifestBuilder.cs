@@ -83,7 +83,7 @@ public class ActionSetBuilder(ActionManifestBuilder root, ActionSet parent)
     {
         var actionItem = new ActionItem
         {
-            Name = $"{parent.Name}/{Enum.GetName(direction)?.ToLowerInvariant()}/{name}",
+            Name = $"{parent.Name}/{Enum.GetName(direction)?.ToLowerInvariant()}/{name.ToLowerInvariant()}",
             Type = type,
             Requirement = requirement,
             Skeleton = skeleton
