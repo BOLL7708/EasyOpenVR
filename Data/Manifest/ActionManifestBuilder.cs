@@ -64,6 +64,7 @@ public class ActionSetBuilder(ActionManifestBuilder root, ActionSet parent)
     /// <summary>
     /// The <c>name</c> is the path to an action.
     /// Paths take the form <c>/actions/actionsetname/in/actionname</c> for input actions or <c>/actions/actionsetname/out/actionname</c> for output actions (like haptics).
+    /// Returns the generated action for reuse elsewhere, instead of the ActionBuilder, as we have the configure argument to perform additional build tasks.
     /// </summary>
     /// <param name="name"></param> 
     /// <param name="type"></param>
@@ -72,7 +73,7 @@ public class ActionSetBuilder(ActionManifestBuilder root, ActionSet parent)
     /// <param name="skeleton"></param>
     /// <param name="configure"></param>
     /// <returns></returns>
-    public ActionSetBuilder AddAction(
+    public ActionItem AddAction(
         string name,
         ActionType type = ActionType.Boolean,
         ActionDirection direction = ActionDirection.In,
@@ -90,7 +91,7 @@ public class ActionSetBuilder(ActionManifestBuilder root, ActionSet parent)
         };
         root.ActionManifest.Actions.Add(actionItem);
         configure?.Invoke(new ActionBuilder(root, actionItem));
-        return this;
+        return actionItem;
     }
 
     /// <summary>
