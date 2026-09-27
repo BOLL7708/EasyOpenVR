@@ -307,7 +307,10 @@ public partial class EasyOpenVr
                         continue; // Disabled
                     }
 
+                    // UPDATE OVERLAY ANIMATIONS
+                    // UPDATE CHAPERONE ANIMATIONS
                     OnPumpCycle(stopwatch.Elapsed.TotalSeconds);
+                    
                     stopwatch.Restart();
 
                     // LOAD ALL EVENTS - EMIT EVENTS
@@ -319,8 +322,6 @@ public partial class EasyOpenVr
                     // LOAD POSES - EMIT EVENTS
                     // LOAD INPUTS - EMIT EVENTS
                     // LOAD STATISTICS - EMIT EVENTS
-                    // UPDATE OVERLAY ANIMATIONS
-                    // UPDATE CHAPERONE ANIMATIONS
 
                     // Sleep for the rest of the cycle so we don't update too fast, that will impact SteamVR.
                     var sleepTimeSpan = intervalTimeSpan - stopwatch.Elapsed;

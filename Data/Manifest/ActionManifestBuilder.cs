@@ -16,11 +16,11 @@ public class ActionManifestBuilder
         return this;
     }
 
-    public ActionManifestBuilder AddDefaultBindings(string type, string url)
+    public ActionManifestBuilder AddDefaultBindings(ControllerType type, string url)
     {
         var defaultBindings = new DefaultBindings
         {
-            ControllerType = type,
+            ControllerType = type.Value,
             BindingUrl = url
         };
         ActionManifest.DefaultBindings.Add(defaultBindings);
@@ -131,4 +131,24 @@ public class ActionBuilder(ActionManifestBuilder root, ActionItem parent)
         od.Add(parent.Name, prompt);
         return this;
     }
+}
+
+public readonly record struct ControllerType(string Value)
+{
+    public static readonly ControllerType FrameController = new("frame_controller");
+    public static readonly ControllerType Knuckles = new("knuckles");
+    public static readonly ControllerType ViveController = new("vive_controller");
+    public static readonly ControllerType ViveCosmosController = new("vive_cosmos_controller");
+    public static readonly ControllerType OculusTouch = new("oculus_touch");
+    public static readonly ControllerType HolographicController = new("holographic_controller");
+    public static readonly ControllerType Gamepad = new("gamepad");
+    public static readonly ControllerType HpMotionController = new("hpmotioncontroller");
+    
+    // Allow any string
+    public static implicit operator ControllerType(string value) => new(value);
+    
+    // Convert back to string
+    public static implicit operator string(ControllerType type) => type.Value;
+    
+    public override string ToString() => Value;
 }

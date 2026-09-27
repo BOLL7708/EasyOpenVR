@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Xml;
 using Valve.VR;
 
 namespace EasyOpenVR;
@@ -60,7 +61,15 @@ public partial class EasyOpenVr
          */
         public string GetRunningApplicationId()
         {
-            var pid = OpenVR.Applications.GetCurrentSceneProcessId();
+            uint pid = 0;
+            try
+            {
+                pid = OpenVR.Applications.GetCurrentSceneProcessId();
+            }
+            catch (Exception e)
+            {
+                evr.DebugLog(e, "Failed to retrieve current scene process ID.");
+            }
             if (pid == 0)
             {
                 return string.Empty;
