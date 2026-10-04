@@ -53,6 +53,12 @@ public partial class EasyOpenVr
         ReadyToShutdown
     }
 
+    public enum EResultType
+    {
+        None,
+        ULong
+    }
+
     public record struct EasyOpenVrResult(
         Enum? Error,
         Enum? Value,
@@ -66,6 +72,10 @@ public partial class EasyOpenVr
         public string ValueType => Value == null ? "" : Value.GetType().Name;
         public string ValueName => Value == null ? "" : Enum.GetName(Value.GetType(), Value) ?? "";
         public bool Success => ErrorOrdinal == 0;
+
+        public string ResultDescription { get; set; } = "";
+        public EResultType ResultType { get; set; } = EResultType.None;
+        public ulong ResultULong { get; set; } = 0;
     }
 
 
@@ -314,14 +324,15 @@ public partial class EasyOpenVr
                     stopwatch.Restart();
 
                     // LOAD ALL EVENTS - EMIT EVENTS
-                    Event.LoadAllNew();
                     // - ACT ON CERTAIN EVENTS TO RELOAD LISTS, ROLES, EXIT, ETC, THINGS USED IN OTHER FEATURES BELOW
-
+                    Event.LoadAllNew();
                     Overlay.LoadAllNewEvents();
-                    
-                    // LOAD POSES - EMIT EVENTS
+
                     // LOAD INPUTS - EMIT EVENTS
-                    // LOAD STATISTICS - EMIT EVENTS
+                    Input.UpdateActionStates([.. Data.InputSourceHandles], 0);
+                    
+                    // TODO: LOAD POSES - EMIT EVENTS
+                    // TODO: LOAD STATISTICS - EMIT EVENTS
 
                     // Sleep for the rest of the cycle so we don't update too fast, that will impact SteamVR.
                     var sleepTimeSpan = intervalTimeSpan - stopwatch.Elapsed;

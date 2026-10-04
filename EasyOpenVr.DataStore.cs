@@ -14,13 +14,14 @@ public partial class EasyOpenVr
     {
         // TODO: All of these should not be needed, no use in caching transient states as they will be emitted via handlers and delegates anyway.
         public readonly ConcurrentDictionary<ETrackedDeviceClass, HashSet<uint>> DeviceClassToTrackedDeviceIndices = new();
-        public readonly ConcurrentDictionary<ulong, InputMethods.InputSource> InputHandleToInputSource = new(Environment.ProcessorCount, (int)OpenVR.k_unMaxTrackedDeviceCount);
+        public readonly ConcurrentDictionary<ulong, InputMethods.InputSource> InputSourceHandleToInputSource = new(Environment.ProcessorCount, (int)OpenVR.k_unMaxTrackedDeviceCount);
         public readonly ConcurrentDictionary<InputMethods.InputSource, ulong> InputSourceToInputHandle = new();
         // public static readonly ConcurrentDictionary<InputMethods.InputSource, ConcurrentDictionary<string, Vec3>> analogInputActionData = new();
         // public static readonly ConcurrentDictionary<InputMethods.InputSource, ConcurrentDictionary<string, OutputDataPose>> poseInputActionData = new();
         // public static readonly ConcurrentDictionary<string, OutputDataSkeletonSummary> skeletonSummaryInputActionData = new();
         public readonly ConcurrentDictionary<InputMethods.InputSource, int> InputSourceToTrackedDeviceIndex = new();
         public readonly ConcurrentDictionary<int, InputMethods.InputSource> TrackedDeviceIndexToInputSource = new();
+        public readonly ConcurrentBag<ulong> InputSourceHandles = [];
 
         /*
          * Run this for a device index, this will register the index to the appropriate device class.
@@ -61,10 +62,12 @@ public partial class EasyOpenVr
 
         public void UpdateInputDeviceHandlesAndIndices()
         {
+            InputSourceHandles.Clear();
             foreach (var inputSource in Enum.GetValues<InputMethods.InputSource>())
             {
                 var handle = evr.Input.GetInputSourceHandle(inputSource);
-                InputHandleToInputSource[handle] = inputSource;
+                InputSourceHandles.Add(handle);
+                InputSourceHandleToInputSource[handle] = inputSource;
                 InputSourceToInputHandle[inputSource] = handle;
                 var info = evr.Device.GetOriginTrackedDeviceInfo(handle);
                 if (info.trackedDeviceIndex == uint.MaxValue) return;
@@ -79,7 +82,7 @@ public partial class EasyOpenVr
         public void Reset()
         {
             DeviceClassToTrackedDeviceIndices.Clear();
-            InputHandleToInputSource.Clear();
+            InputSourceHandleToInputSource.Clear();
         }
     }
 }

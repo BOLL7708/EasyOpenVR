@@ -57,6 +57,11 @@ public class ActionManifestBuilder
         var json = new JsonUtils(ctx);
         return json.Serialize(ActionManifest);
     }
+
+    public ActionSet[] GetActionSets()
+    {
+        return [.. ActionManifest.ActionSets];
+    }
 }
 
 public class ActionSetBuilder(ActionManifestBuilder root, ActionSet parent)
