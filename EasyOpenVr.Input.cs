@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.ComponentModel;
 using System.IO;
@@ -20,18 +19,21 @@ public partial class EasyOpenVr
         public enum InputSource
         {
             #region General
-            [Description("/unrestricted")] 
-            Any,
+
+            [Description("/unrestricted")] Any,
+
             #endregion
-            
+
             // Reordered in the order they appear on the body from top to bottom for each side.
+
             #region Left
+
             [Description(OpenVR.k_pchPathUserShoulderLeft)]
             LeftShoulder,
 
             [Description(OpenVR.k_pchPathUserElbowLeft)]
             LeftElbow,
-            
+
             [Description(OpenVR.k_pchPathUserWristLeft)]
             LeftWrist,
 
@@ -46,8 +48,11 @@ public partial class EasyOpenVr
 
             [Description(OpenVR.k_pchPathUserFootLeft)]
             LeftFoot,
+
             #endregion
+
             #region Right
+
             [Description(OpenVR.k_pchPathUserHandRight)]
             RightHand,
 
@@ -68,9 +73,11 @@ public partial class EasyOpenVr
 
             [Description(OpenVR.k_pchPathUserFootRight)]
             RightFoot,
+
             #endregion
-            
+
             #region Center
+
             [Description(OpenVR.k_pchPathUserHead)]
             Head,
 
@@ -79,9 +86,11 @@ public partial class EasyOpenVr
 
             [Description(OpenVR.k_pchPathUserWaist)]
             Waist,
+
             #endregion
-            
+
             #region Devices
+
             [Description(OpenVR.k_pchPathUserGamepad)]
             Gamepad,
 
@@ -96,6 +105,7 @@ public partial class EasyOpenVr
 
             [Description(OpenVR.k_pchPathUserTreadmill)]
             Treadmill,
+
             #endregion
         }
 
@@ -109,34 +119,34 @@ public partial class EasyOpenVr
 
         internal class InputAction
         {
-            internal string path;
-            internal object data;
-            internal InputType type;
-            internal object action;
-            internal ulong handle = 0;
-            internal string pathEnd = "";
+            internal string Path;
+            internal object Data;
+            internal InputType Type;
+            internal object Action;
+            internal ulong Handle = 0;
+            internal string PathEnd = "";
 
-            internal bool
-                isChord = false; // Needed to avoid filtering on the input source handle as Chords can flip their on/off action between sources depending on which button is activated/deactivated first.
+            /// Needed to avoid filtering on the input source handle as Chords can flip their on/off action between sources depending on which button is activated/deactivated first.
+            internal bool IsChord = false;
 
             internal InputActionInfo GetInfo(ulong sourceHandle)
             {
                 return new InputActionInfo
                 {
-                    handle = handle,
-                    path = path,
-                    pathEnd = pathEnd,
-                    sourceHandle = sourceHandle
+                    Handle = Handle,
+                    Path = Path,
+                    PathEnd = PathEnd,
+                    SourceHandle = sourceHandle
                 };
             }
         }
 
         public class InputActionInfo
         {
-            public ulong handle;
-            public string path;
-            public string pathEnd;
-            public ulong sourceHandle;
+            public ulong Handle;
+            public string Path;
+            public string PathEnd;
+            public ulong SourceHandle;
         }
 
         private ImmutableList<InputAction> _inputActions = [];
@@ -166,6 +176,7 @@ public partial class EasyOpenVr
                 };
                 _inputActionSets = _inputActionSets.Add(actionSet);
             }
+
             var result = evr.DebugLog(error);
             result.ResultDescription = "Action set handle";
             result.ResultType = EResultType.ULong;
@@ -176,28 +187,29 @@ public partial class EasyOpenVr
         private EasyOpenVrResult RegisterAction(ref InputAction ia)
         {
             ulong handle = 0;
-            var error = OpenVR.Input.GetActionHandle(ia.path, ref handle);
-            var pathParts = ia.path.Split('/');
+            var error = OpenVR.Input.GetActionHandle(ia.Path, ref handle);
+            var pathParts = ia.Path.Split('/');
             if (handle != 0 && error == EVRInputError.None)
             {
-                ia.handle = handle;
-                ia.pathEnd = pathParts[^1];
+                ia.Handle = handle;
+                ia.PathEnd = pathParts[^1];
                 _inputActions = _inputActions.Add(ia);
             }
+
             var result = evr.DebugLog(error);
             result.ResultDescription = "Action handle";
             result.ResultType = EResultType.ULong;
             result.ResultULong = handle;
             return result;
         }
-        
+
         /// <summary>
         /// Unregister a collection of actions matched on their handles.
         /// </summary>
         /// <exception cref="NotImplementedException"></exception>
         public void UnregisterActions(ulong[] handles)
         {
-            _inputActions = _inputActions.RemoveAll(it => handles.Contains(it.handle));
+            _inputActions = _inputActions.RemoveAll(it => handles.Contains(it.Handle));
         }
 
         /// <summary>
@@ -217,11 +229,11 @@ public partial class EasyOpenVr
         {
             var ia = new InputAction
             {
-                path = path,
-                type = InputType.Analog,
-                action = action,
-                data = new InputAnalogActionData_t(),
-                isChord = isChord
+                Path = path,
+                Type = InputType.Analog,
+                Action = action,
+                Data = new InputAnalogActionData_t(),
+                IsChord = isChord
             };
             return RegisterAction(ref ia);
         }
@@ -233,10 +245,10 @@ public partial class EasyOpenVr
         {
             var ia = new InputAction
             {
-                path = path,
-                type = InputType.SkeletonSummary,
-                action = action,
-                data = new VRSkeletalSummaryData_t()
+                Path = path,
+                Type = InputType.SkeletonSummary,
+                Action = action,
+                Data = new VRSkeletalSummaryData_t()
             };
             return RegisterAction(ref ia);
         }
@@ -249,11 +261,11 @@ public partial class EasyOpenVr
         {
             var inputAction = new InputAction
             {
-                path = path,
-                type = InputType.Digital,
-                action = action,
-                data = new InputDigitalActionData_t(),
-                isChord = isChord
+                Path = path,
+                Type = InputType.Digital,
+                Action = action,
+                Data = new InputDigitalActionData_t(),
+                IsChord = isChord
             };
             return RegisterAction(ref inputAction);
         }
@@ -266,11 +278,11 @@ public partial class EasyOpenVr
         {
             var inputAction = new InputAction
             {
-                path = path,
-                type = InputType.Pose,
-                action = action,
-                data = new InputPoseActionData_t(),
-                isChord = isChord
+                Path = path,
+                Type = InputType.Pose,
+                Action = action,
+                Data = new InputPoseActionData_t(),
+                IsChord = isChord
             };
             return RegisterAction(ref inputAction);
         }
@@ -280,7 +292,7 @@ public partial class EasyOpenVr
          */
         public ulong GetInputSourceHandle(InputSource inputSource)
         {
-            var attributes = (DescriptionAttribute[]) (inputSource
+            var attributes = (DescriptionAttribute[])(inputSource
                 .GetType()
                 .GetField(inputSource.ToString())
                 ?.GetCustomAttributes(typeof(DescriptionAttribute), false) ?? []);
@@ -308,7 +320,7 @@ public partial class EasyOpenVr
             );
             _inputActions.ForEach((InputAction action) =>
             {
-                switch (action.type)
+                switch (action.Type)
                 {
                     case InputType.Analog:
                         foreach (var handle in inputSourceHandles) GetAnalogAction(action, handle);
@@ -329,45 +341,77 @@ public partial class EasyOpenVr
 
         private bool GetSkeletalSummary(InputAction inputAction, ulong inputSourceHandle)
         {
-            var data = (VRSkeletalSummaryData_t)inputAction.data;
-            var error = OpenVR.Input.GetSkeletalSummaryData(inputAction.handle, EVRSummaryType.FromDevice, ref data);
-            var action = ((Action<VRSkeletalSummaryData_t, InputActionInfo>)inputAction.action);
+            var data = (VRSkeletalSummaryData_t)inputAction.Data;
+            var error = OpenVR.Input.GetSkeletalSummaryData(
+                inputAction.Handle,
+                EVRSummaryType.FromDevice,
+                ref data
+            );
+            var action = (Action<VRSkeletalSummaryData_t, InputActionInfo>)inputAction.Action;
             action.Invoke(data, inputAction.GetInfo(inputSourceHandle));
             return true; // DebugLog(error, $"handle: {inputAction.handle}, error"); // TODO: This spams continuously when no controllers are connected.
         }
 
         private EasyOpenVrResult GetAnalogAction(InputAction inputAction, ulong inputSourceHandle)
         {
-            if (inputAction.isChord) inputSourceHandle = 0;
+            if (inputAction.IsChord) inputSourceHandle = 0;
             var size = (uint)Marshal.SizeOf<InputAnalogActionData_t>();
-            var data = (InputAnalogActionData_t)inputAction.data;
-            var error = OpenVR.Input.GetAnalogActionData(inputAction.handle, ref data, size, inputSourceHandle);
-            var action = ((Action<InputAnalogActionData_t, InputActionInfo>)inputAction.action);
-            if (data.bActive) action.Invoke(data, inputAction.GetInfo(inputSourceHandle));
-            return evr.DebugLog(error, $"handle: {inputAction.handle}, error");
+            var data = (InputAnalogActionData_t)inputAction.Data;
+            var error = OpenVR.Input.GetAnalogActionData(
+                inputAction.Handle,
+                ref data,
+                size,
+                inputSourceHandle
+            );
+            var action = (Action<InputAnalogActionData_t, InputActionInfo>)inputAction.Action;
+            if (data.bActive)
+            {
+                action.Invoke(data, inputAction.GetInfo(inputSourceHandle));
+            }
+
+            return evr.DebugLog(error, $"handle: {inputAction.Handle}, error");
         }
 
         private EasyOpenVrResult GetDigitalAction(InputAction inputAction, ulong inputSourceHandle)
         {
-            if (inputAction.isChord) inputSourceHandle = 0;
+            if (inputAction.IsChord) inputSourceHandle = 0;
             var size = (uint)Marshal.SizeOf<InputDigitalActionData_t>();
-            var data = (InputDigitalActionData_t)inputAction.data;
-            var error = OpenVR.Input.GetDigitalActionData(inputAction.handle, ref data, size, inputSourceHandle);
-            var action = ((Action<InputDigitalActionData_t, InputActionInfo>)inputAction.action);
-            if (data.bActive && data.bChanged) action.Invoke(data, inputAction.GetInfo(inputSourceHandle));
-            return evr.DebugLog(error, $"handle: {inputAction.handle}, error");
+            var data = (InputDigitalActionData_t)inputAction.Data;
+            var error = OpenVR.Input.GetDigitalActionData(
+                inputAction.Handle,
+                ref data,
+                size,
+                inputSourceHandle
+            );
+            var action = (Action<InputDigitalActionData_t, InputActionInfo>)inputAction.Action;
+            if (data is { bActive: true, bChanged: true })
+            {
+                action.Invoke(data, inputAction.GetInfo(inputSourceHandle));
+            }
+
+            return evr.DebugLog(error, $"handle: {inputAction.Handle}, error");
         }
 
         private EasyOpenVrResult GetPoseAction(InputAction inputAction, ulong inputSourceHandle)
         {
-            if (inputAction.isChord) inputSourceHandle = 0;
+            if (inputAction.IsChord) inputSourceHandle = 0;
             var size = (uint)Marshal.SizeOf<InputPoseActionData_t>();
-            var data = (InputPoseActionData_t)inputAction.data;
-            var error = OpenVR.Input.GetPoseActionDataRelativeToNow(inputAction.handle,
-                ETrackingUniverseOrigin.TrackingUniverseStanding, 0f, ref data, size, inputSourceHandle);
-            var action = (Action<InputPoseActionData_t, InputActionInfo>)inputAction.action;
-            if (data.bActive) action.Invoke(data, inputAction.GetInfo(inputSourceHandle));
-            return evr.DebugLog(error, $"handle: {inputAction.handle}, error");
+            var data = (InputPoseActionData_t)inputAction.Data;
+            var error = OpenVR.Input.GetPoseActionDataRelativeToNow(
+                inputAction.Handle,
+                ETrackingUniverseOrigin.TrackingUniverseStanding,
+                0f,
+                ref data,
+                size,
+                inputSourceHandle
+            );
+            var action = (Action<InputPoseActionData_t, InputActionInfo>)inputAction.Action;
+            if (data.bActive)
+            {
+                action.Invoke(data, inputAction.GetInfo(inputSourceHandle));
+            }
+
+            return evr.DebugLog(error, $"handle: {inputAction.Handle}, error");
         }
     }
 }

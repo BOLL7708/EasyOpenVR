@@ -1,7 +1,6 @@
 using System;
 using System.Diagnostics;
 using System.Linq;
-using System.Reflection.Metadata.Ecma335;
 using System.Threading;
 using System.Threading.Tasks;
 using Valve.VR;
@@ -278,6 +277,10 @@ public partial class EasyOpenVr
 
                     DebugLog(pumpEnabled ? $"Pump interval is: {intervalTimeSpan.TotalMilliseconds}ms" : "Pump is disabled.");
 
+                    // Without this already connected devices will not be enumerated.
+                    Data.UpdateInputDeviceHandlesAndIndices();
+                    Data.UpdateDeviceClassIndices();
+                    
                     Event.Register(EVREventType.VREvent_TrackedDeviceActivated, (in vrEvent) =>
                         {
                             Data.UpdateInputDeviceHandlesAndIndices();
@@ -329,7 +332,7 @@ public partial class EasyOpenVr
                     Overlay.LoadAllNewEvents();
 
                     // LOAD INPUTS - EMIT EVENTS
-                    Input.UpdateActionStates([.. Data.InputSourceHandles], 0);
+                    Input.UpdateActionStates([.. Data.InputSourceHandleToInputSource.Keys], 0);
                     
                     // TODO: LOAD POSES - EMIT EVENTS
                     // TODO: LOAD STATISTICS - EMIT EVENTS
