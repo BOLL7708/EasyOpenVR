@@ -152,6 +152,11 @@ public partial class EasyOpenVr
         private ImmutableList<InputAction> _inputActions = [];
         private ImmutableList<VRActiveActionSet_t> _inputActionSets = [];
 
+        public bool HasAnyRegisteredActionSets()
+        {
+            return !_inputActionSets.IsEmpty;
+        }
+
         /**
          * Load the actions manifest to register actions for the application
          * OBS: Make sure the encoding is UTF8 and not UTF8+BOM

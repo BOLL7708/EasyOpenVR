@@ -332,7 +332,7 @@ public partial class EasyOpenVr
                     Overlay.LoadAllNewEvents();
 
                     // LOAD INPUTS - EMIT EVENTS
-                    Input.UpdateActionStates([.. Data.InputSourceHandleToInputSource.Keys], 0);
+                    if(Input.HasAnyRegisteredActionSets()) Input.UpdateActionStates([.. Data.InputSourceHandleToInputSource.Keys], 0);
                     
                     // TODO: LOAD POSES - EMIT EVENTS
                     // TODO: LOAD STATISTICS - EMIT EVENTS
