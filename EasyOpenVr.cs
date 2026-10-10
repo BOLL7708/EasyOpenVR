@@ -99,6 +99,7 @@ public partial class EasyOpenVr
     private readonly Random _random = new();
 
     #region Events
+
     public delegate void DebugMessageHandler(string message, EDebugLevel level);
 
     public event DebugMessageHandler? DebugMessage;
@@ -180,15 +181,17 @@ public partial class EasyOpenVr
         if (!_workerThread.IsAlive) _workerThread.Start();
     }
 
+    private readonly CancellationTokenSource _cts = new();
+
     private void Worker()
     {
-        /* TODO
-         Alright, the concept here. Instead of manually keeping track of indices, new devices, events, let us keep that
-         inside the library. Make the event pump MANDATORY even if at a low Hz, then have live lists of events and
-         transforms and indices that are continuously updated, compared to OpenVR2WS where we have a bunch of lists.
-         */
+        // TODO
+        //  Alright, the concept here. Instead of manually keeping track of indices, new devices, events, let us keep that
+        //  inside the library. Make the event pump MANDATORY even if at a low Hz, then have live lists of events and
+        //  transforms and indices that are continuously updated, compared to OpenVR2WS where we have a bunch of lists.
 
         Thread.CurrentThread.IsBackground = true;
+        var token = _cts.Token;
         var hmdHz = 0;
         var firstInitComplete = false;
         var beginShutdown = false;
@@ -197,183 +200,185 @@ public partial class EasyOpenVr
         var intervalTimeSpan = TimeSpan.FromMicroseconds(1_000_000);
         var stopwatch = new Stopwatch();
 
-        while (true)
+        try
         {
-            if (_initState > 0)
+            while (!token.IsCancellationRequested)
             {
-                #region INIT
-
-                if (!firstInitComplete)
+                if (_initState > 0)
                 {
-                    OnState(EState.InitializingPump);
-                    firstInitComplete = true;
-
-                    if (_initParams.VrAppManifestPath is { Length: > 0 })
+                    if (!firstInitComplete)
                     {
-                        System.AddAppManifest(_initParams.VrAppManifestPath);
-                        // TODO: Look over the auto-launch stuff in the call to System... it's a mess.
-                    }
+                        #region INIT
 
-                    if (_initParams.ActionManifestPath is { Length: > 0 })
-                    {
-                        Input.LoadActionManifest(_initParams.ActionManifestPath);
-                    }
-                    
-                    Event.Register(EVREventType.VREvent_Quit, (in _) =>
+                        OnState(EState.InitializingPump);
+                        firstInitComplete = true;
+
+                        if (_initParams.VrAppManifestPath is { Length: > 0 })
                         {
-                            beginShutdown = true;
+                            System.AddAppManifest(_initParams.VrAppManifestPath);
+                            // TODO: Look over the auto-launch stuff in the call to System... it's a mess.
                         }
-                    );
 
-                    Event.Register(EVREventType.VREvent_QuitAcknowledged, (in _) =>
+                        if (_initParams.ActionManifestPath is { Length: > 0 })
                         {
-                            continueShutdown = true;
+                            Input.LoadActionManifest(_initParams.ActionManifestPath);
                         }
-                    );
 
-                    switch (_initParams.PumpInterval)
-                    {
-                        // When using this pump mode we need to keep track of the headset display frequency.
-                        case EPumpInterval.FractionOfHmdHz:
+                        Event.Register(EVREventType.VREvent_Quit, (in _) => { beginShutdown = true; }
+                        );
+
+                        switch (_initParams.PumpInterval)
                         {
-                            // Initial retrieval of value
-                            Data.UpdateDeviceClassIndices();
-                            var hmdIndex = Data.DeviceClassToTrackedDeviceIndices[ETrackedDeviceClass.HMD].First();
-                            hmdHz = (int)Math.Round(Device.GetFloatTrackedDeviceProperty(
-                                hmdIndex,
-                                ETrackedDeviceProperty.Prop_DisplayFrequency_Float
-                            ));
-                            intervalTimeSpan = GetIntervalTimespanFromHmdHz(hmdHz, _initParams.PumpValue);
-
-                            // Registration of listener for change of value
-                            Event.Register(EVREventType.VREvent_PropertyChanged, (in vrEvent) =>
+                            // When using this pump mode we need to keep track of the headset display frequency.
+                            case EPumpInterval.FractionOfHmdHz:
                             {
-                                if (vrEvent.data.property.prop != ETrackedDeviceProperty.Prop_DisplayFrequency_Float) return;
+                                // Initial retrieval of value
+                                Data.UpdateDeviceClassIndices();
+                                var hmdIndex = Data.DeviceClassToTrackedDeviceIndices[ETrackedDeviceClass.HMD].First();
                                 hmdHz = (int)Math.Round(Device.GetFloatTrackedDeviceProperty(
-                                    vrEvent.trackedDeviceIndex,
+                                    hmdIndex,
                                     ETrackedDeviceProperty.Prop_DisplayFrequency_Float
                                 ));
                                 intervalTimeSpan = GetIntervalTimespanFromHmdHz(hmdHz, _initParams.PumpValue);
-                            });
-                            break;
+
+                                // Registration of listener for change of value
+                                Event.Register(EVREventType.VREvent_PropertyChanged, (in vrEvent) =>
+                                {
+                                    if (vrEvent.data.property.prop != ETrackedDeviceProperty.Prop_DisplayFrequency_Float) return;
+                                    hmdHz = (int)Math.Round(Device.GetFloatTrackedDeviceProperty(
+                                        vrEvent.trackedDeviceIndex,
+                                        ETrackedDeviceProperty.Prop_DisplayFrequency_Float
+                                    ));
+                                    intervalTimeSpan = GetIntervalTimespanFromHmdHz(hmdHz, _initParams.PumpValue);
+                                });
+                                break;
+                            }
+                            case EPumpInterval.FixedHz:
+                            {
+                                intervalTimeSpan = TimeSpan.FromMicroseconds(1_000_000.0 / _initParams.PumpValue);
+                                break;
+                            }
+                            case EPumpInterval.Millisecond:
+                            {
+                                intervalTimeSpan = TimeSpan.FromMilliseconds(_initParams.PumpValue);
+                                break;
+                            }
+                            case EPumpInterval.None:
+                            default:
+                            {
+                                pumpEnabled = false;
+                                break;
+                            }
                         }
-                        case EPumpInterval.FixedHz:
-                        {
-                            intervalTimeSpan = TimeSpan.FromMicroseconds(1_000_000.0 / _initParams.PumpValue);
-                            break;
-                        }
-                        case EPumpInterval.Millisecond:
-                        {
-                            intervalTimeSpan = TimeSpan.FromMilliseconds(_initParams.PumpValue);
-                            break;
-                        }
-                        case EPumpInterval.None:
-                        default:
-                        {
-                            pumpEnabled = false;
-                            break;
-                        }
+
+                        DebugLog(pumpEnabled ? $"Pump interval is: {intervalTimeSpan.TotalMilliseconds}ms" : "Pump is disabled.");
+
+                        // Without this already connected devices will not be enumerated.
+                        Data.UpdateInputDeviceHandlesAndIndices();
+                        Data.UpdateDeviceClassIndices();
+
+                        Event.Register(EVREventType.VREvent_TrackedDeviceActivated, (in vrEvent) =>
+                            {
+                                Data.UpdateInputDeviceHandlesAndIndices();
+                                Data.UpdateDeviceClassIndices(vrEvent.trackedDeviceIndex);
+                            }
+                        );
+
+                        Event.Register([
+                                EVREventType.VREvent_TrackedDeviceDeactivated,
+                                EVREventType.VREvent_TrackedDeviceRoleChanged,
+                                EVREventType.VREvent_TrackedDeviceUpdated
+                            ], (in _) =>
+                            {
+                                Data.UpdateInputDeviceHandlesAndIndices();
+                                Data.UpdateDeviceClassIndices();
+                            }
+                        );
+
+                        Event.Register(EVREventType.VREvent_None,
+                            (in ev) =>
+                            {
+                                DebugLog("!!! [NONE] EVENT DETECTED!"); // TODO
+                            }
+                        );
+
+                        OnState(EState.RunningPump);
+
+                        #endregion
                     }
+                    else
+                    {
+                        #region PUMP
 
-                    DebugLog(pumpEnabled ? $"Pump interval is: {intervalTimeSpan.TotalMilliseconds}ms" : "Pump is disabled.");
-
-                    // Without this already connected devices will not be enumerated.
-                    Data.UpdateInputDeviceHandlesAndIndices();
-                    Data.UpdateDeviceClassIndices();
-                    
-                    Event.Register(EVREventType.VREvent_TrackedDeviceActivated, (in vrEvent) =>
+                        if (!pumpEnabled)
                         {
-                            Data.UpdateInputDeviceHandlesAndIndices();
-                            Data.UpdateDeviceClassIndices(vrEvent.trackedDeviceIndex);
+                            if (token.WaitHandle.WaitOne(intervalTimeSpan)) break;
                         }
-                    );
-
-                    Event.Register([
-                            EVREventType.VREvent_TrackedDeviceDeactivated,
-                            EVREventType.VREvent_TrackedDeviceRoleChanged,
-                            EVREventType.VREvent_TrackedDeviceUpdated
-                        ], (in _) =>
+                        else
                         {
-                            Data.UpdateInputDeviceHandlesAndIndices();
-                            Data.UpdateDeviceClassIndices();
-                        }
-                    );
+                            OnPumpCycle(stopwatch.Elapsed.TotalSeconds);
+                            stopwatch.Restart();
 
-                    Event.Register(EVREventType.VREvent_None,
-                        (in ev) =>
-                        {
-                            DebugLog("!!! [NONE] EVENT DETECTED!"); // TODO
-                        }
-                    );
+                            Event.LoadAllNew(); // This loads things like the quit event that will trigger the below.
+                            if (beginShutdown || token.IsCancellationRequested) break; // before any other OpenVR call
 
-                    OnState(EState.RunningPump);
-                    
-                    #endregion
+                            Overlay.LoadAllNewEvents();
+                            // TODO: Update overlay animations
+                            // TODO: Update chaperone animations
+                            // TODO: Broadcast... poses? Is that included in inputs below maybe?
+
+                            if (Input.HasAnyRegisteredActionSets())
+                            {
+                                Input.UpdateActionStates([.. Data.InputSourceHandleToInputSource.Keys], 0);
+                            }
+
+                            var sleep = intervalTimeSpan - stopwatch.Elapsed;
+                            if (sleep.Ticks > 0 && token.WaitHandle.WaitOne(sleep)) break;
+                        }
+
+                        #endregion
+                    }
                 }
                 else
                 {
-                    #region PUMP
+                    #region IDLE
 
-                    if (!pumpEnabled)
-                    {
-                        Thread.Sleep(intervalTimeSpan);
-                        continue; // Disabled
-                    }
-
-                    // UPDATE OVERLAY ANIMATIONS
-                    // UPDATE CHAPERONE ANIMATIONS
-                    OnPumpCycle(stopwatch.Elapsed.TotalSeconds);
-                    
-                    stopwatch.Restart();
-
-                    // LOAD ALL EVENTS - EMIT EVENTS
-                    // - ACT ON CERTAIN EVENTS TO RELOAD LISTS, ROLES, EXIT, ETC, THINGS USED IN OTHER FEATURES BELOW
-                    Event.LoadAllNew();
-                    Overlay.LoadAllNewEvents();
-
-                    // LOAD INPUTS - EMIT EVENTS
-                    if(Input.HasAnyRegisteredActionSets()) Input.UpdateActionStates([.. Data.InputSourceHandleToInputSource.Keys], 0);
-                    
-                    // TODO: LOAD POSES - EMIT EVENTS
-                    // TODO: LOAD STATISTICS - EMIT EVENTS
-
-                    // Sleep for the rest of the cycle so we don't update too fast, that will impact SteamVR.
-                    var sleepTimeSpan = intervalTimeSpan - stopwatch.Elapsed;
-                    if (sleepTimeSpan.Ticks > 0) Thread.Sleep(sleepTimeSpan);
+                    // Idle while we attempt to init
+                    if (token.WaitHandle.WaitOne(1000)) break;
+                    Init();
 
                     #endregion
                 }
             }
-            else
+
+            if (beginShutdown && !_hasAcknowledgedShutdown)
             {
-                #region IDLE
-
-                // Idle with attempted init
-                Thread.Sleep(1000);
-                Init(); // TODO: This seems to restart SteamVR which I'm not sure it should... figure out if we can control it. 
-
-                #endregion
-            }
-
-            if (!beginShutdown) continue; // Quit event
-            
-            if (!_hasAcknowledgedShutdown) {
-                System.AcknowledgeShutdown();
+                System.AcknowledgeShutdown(); // AcknowledgeQuit_Exiting
                 _hasAcknowledgedShutdown = true;
             }
-            
-            if (!continueShutdown) continue; // Quit Acknowledged event
-            
-            break;
         }
-        OnState(EState.ReadyToShutdown);
+        finally
+        {
+            if (_initState > 0)
+            {
+                System.Shutdown(); // Limits this to the current thread
+                _initState = 0;
+            }
+
+            OnState(EState.ReadyToShutdown);
+        }
     }
 
     public void Shutdown()
     {
-        System.Shutdown();
+        _cts.Cancel();
+        if (_workerThread is { IsAlive: true } && Thread.CurrentThread != _workerThread)
+        {
+            // Blocks the current thread preventing the final OnState call to happen before the worker has died.
+            _workerThread.Join();
+        }
     }
-    
+
     private static TimeSpan GetIntervalTimespanFromHmdHz(int hmdHz, double fraction = 1.0)
     {
         return TimeSpan.FromMicroseconds(1_000_000.0 / hmdHz * fraction);

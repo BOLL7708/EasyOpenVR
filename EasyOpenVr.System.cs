@@ -120,17 +120,16 @@ public partial class EasyOpenVr
             return version;
         }
 
-        /**
-         * Listen for a VREvent_Quit and run this afterwards for your application to not get terminated. Then run Shutdown.
-         */
+        
+        /// Listen for a VREvent_Quit and run this to prevent your application from terminating early.
+        /// When cleanup/winddown is done, then run Shutdown.
         public void AcknowledgeShutdown()
         {
             OpenVR.System.AcknowledgeQuit_Exiting();
         }
 
-        /**
-         * Run this after AcknowledgeShutdown and after finishing all work, or OpenVR will likely throw an exception.
-         */
+        /// Run this after AcknowledgeShutdown and after finishing all work,
+        /// or OpenVR will likely throw an exception.
         public void Shutdown()
         {
             OpenVR.Shutdown();
