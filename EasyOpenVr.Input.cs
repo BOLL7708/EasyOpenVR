@@ -189,22 +189,28 @@ public partial class EasyOpenVr
             return result;
         }
 
-        private EasyOpenVrResult RegisterAction(ref InputAction ia)
+        public EasyOpenVrResult GetActionHandle(string path)
         {
             ulong handle = 0;
-            var error = OpenVR.Input.GetActionHandle(ia.Path, ref handle);
+            var error = OpenVR.Input.GetActionHandle(path, ref handle);
+            var result = evr.DebugLog(error);
+            result.ResultDescription = "Action handle";
+            result.ResultType = EResultType.ULong;
+            result.ResultULong = handle;
+            return result;
+        }
+
+        private EasyOpenVrResult RegisterAction(ref InputAction ia)
+        {
+            var result = GetActionHandle(ia.Path);
+            var handle = result.ResultULong;
             var pathParts = ia.Path.Split('/');
-            if (handle != 0 && error == EVRInputError.None)
+            if (handle != 0 && (EVRInputError?) result.Error == EVRInputError.None)
             {
                 ia.Handle = handle;
                 ia.PathEnd = pathParts[^1];
                 _inputActions = _inputActions.Add(ia);
             }
-
-            var result = evr.DebugLog(error);
-            result.ResultDescription = "Action handle";
-            result.ResultType = EResultType.ULong;
-            result.ResultULong = handle;
             return result;
         }
 
@@ -417,6 +423,22 @@ public partial class EasyOpenVr
             }
 
             return evr.DebugLog(error, $"handle: {inputAction.Handle}, error");
+        }
+
+        /// <summary>
+        /// Send haptic pulse to input device. Has defaults that matches the input hover pulse in SteamVR.
+        /// </summary>
+        /// <param name="actionHandle"></param>
+        /// <param name="restrictToDevice"></param>
+        /// <param name="durationSeconds"></param>
+        /// <param name="frequency"></param>
+        /// <param name="amplitude"></param>
+        /// <param name="delaySeconds"></param>
+        /// <returns></returns>
+        public EasyOpenVrResult SendHapticPulse(ulong actionHandle, ulong restrictToDevice, float durationSeconds = 0, float frequency = 1f, float amplitude = 0.16f, float delaySeconds = 0f)
+        {
+            var error = OpenVR.Input.TriggerHapticVibrationAction(actionHandle, delaySeconds, durationSeconds, frequency, amplitude, restrictToDevice);
+            return evr.DebugLog(error);
         }
     }
 }
