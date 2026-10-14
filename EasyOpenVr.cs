@@ -37,7 +37,7 @@ public partial class EasyOpenVr
     public enum EPumpInterval
     {
         None,
-        FractionOfHmdHz,
+        HmdHz,
         FixedHz,
         Millisecond
     }
@@ -195,8 +195,9 @@ public partial class EasyOpenVr
         var hmdHz = 0;
         var firstInitComplete = false;
         var beginShutdown = false;
-        var continueShutdown = false;
         var pumpEnabled = true;
+        var waitForFrame = _initParams.PumpInterval == EPumpInterval.HmdHz;
+        uint frameTimeout = 1000;
         var intervalTimeSpan = TimeSpan.FromMicroseconds(1_000_000);
         var stopwatch = new Stopwatch();
 
@@ -229,8 +230,8 @@ public partial class EasyOpenVr
 
                         switch (_initParams.PumpInterval)
                         {
-                            // When using this pump mode we need to keep track of the headset display frequency.
-                            case EPumpInterval.FractionOfHmdHz:
+                            // When using this pump mode we need to keep track of the headset display frequency and wait for frame sync.
+                            case EPumpInterval.HmdHz:
                             {
                                 // Initial retrieval of value
                                 Data.UpdateDeviceClassIndices();
@@ -239,7 +240,8 @@ public partial class EasyOpenVr
                                     hmdIndex,
                                     ETrackedDeviceProperty.Prop_DisplayFrequency_Float
                                 ));
-                                intervalTimeSpan = GetIntervalTimespanFromHmdHz(hmdHz, _initParams.PumpValue);
+                                intervalTimeSpan = GetIntervalTimespanFromHmdHz(hmdHz);
+                                frameTimeout = (uint)Math.Ceiling(intervalTimeSpan.TotalMilliseconds);
 
                                 // Registration of listener for change of value
                                 Event.Register(EVREventType.VREvent_PropertyChanged, (in vrEvent) =>
@@ -249,7 +251,8 @@ public partial class EasyOpenVr
                                         vrEvent.trackedDeviceIndex,
                                         ETrackedDeviceProperty.Prop_DisplayFrequency_Float
                                     ));
-                                    intervalTimeSpan = GetIntervalTimespanFromHmdHz(hmdHz, _initParams.PumpValue);
+                                    intervalTimeSpan = GetIntervalTimespanFromHmdHz(hmdHz);
+                                    frameTimeout = (uint)Math.Ceiling(intervalTimeSpan.TotalMilliseconds);
                                 });
                                 break;
                             }
@@ -332,8 +335,18 @@ public partial class EasyOpenVr
                                 Input.UpdateActionStates([.. Data.InputSourceHandleToInputSource.Keys], 0);
                             }
 
-                            var sleep = intervalTimeSpan - stopwatch.Elapsed;
-                            if (sleep.Ticks > 0 && token.WaitHandle.WaitOne(sleep)) break;
+                            if (waitForFrame)
+                            {
+                                // If we rely on the HMD Hz for cycle, we sync with the runtime frame delivery.
+                                var error = OpenVR.Overlay.WaitFrameSync(frameTimeout);
+                                if(error != EVROverlayError.None) DebugLog(error);
+                            }
+                            else
+                            {
+                                // Else we simply wait to match the defined interval.
+                                var sleep = intervalTimeSpan - stopwatch.Elapsed;
+                                if (sleep.Ticks > 0) token.WaitHandle.WaitOne(sleep);
+                            }
                         }
 
                         #endregion
@@ -379,9 +392,9 @@ public partial class EasyOpenVr
         }
     }
 
-    private static TimeSpan GetIntervalTimespanFromHmdHz(int hmdHz, double fraction = 1.0)
+    private static TimeSpan GetIntervalTimespanFromHmdHz(int hmdHz)
     {
-        return TimeSpan.FromMicroseconds(1_000_000.0 / hmdHz * fraction);
+        return TimeSpan.FromMicroseconds(1_000_000.0 / hmdHz);
     }
 
     #endregion

@@ -95,7 +95,7 @@ public class EasyOpenVrBuilder
     /// <para>If this is not set the pump is disabled, and these things will have to be triggered in external code.</para>
     /// The pumpValue is used differently depending on the chosen interval.
     /// <list type="bullet">
-    /// <item><description>FractionOfHmdHz : Hz = HmdHz / value</description></item>
+    /// <item><description>HmdHz : Hz = HmdHz (value ignored)</description></item>
     /// <item><description>FixedHz : Hz = value</description></item>
     /// <item><description>Millisecond : Hz = 1000 / value</description></item>
     /// </list>
