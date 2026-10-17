@@ -124,16 +124,21 @@ public partial class EasyOpenVr
         State?.Invoke(state);
     }
 
-    public delegate void PumpCycleHandler(double deltaMs);
+    public delegate void PumpCycleHandler(double ms);
 
-    public event PumpCycleHandler? PumpCycle;
+    public event PumpCycleHandler? PumpCycleDeltaMs;
+    public event PumpCycleHandler? PumpCycleProcessingMs;
 
-    /**
-     * Will trigger on each pump cycle, reporting the delta time in seconds since the last cycle.
-     */
-    private void OnPumpCycle(double delta)
+    /// Will trigger on each pump cycle, reporting the delta time in seconds since the last cycle.
+    private void OnPumpCycleIn(double delta)
     {
-        PumpCycle?.Invoke(delta);
+        PumpCycleDeltaMs?.Invoke(delta);
+    }
+
+    /// Will trigger on each pump cycle before repeating, basically the processing time.
+    private void OnPumpCycleOut(double delta)
+    {
+        PumpCycleProcessingMs?.Invoke(delta);
     }
 
     #endregion
@@ -241,7 +246,7 @@ public partial class EasyOpenVr
                                     ETrackedDeviceProperty.Prop_DisplayFrequency_Float
                                 ));
                                 intervalTimeSpan = GetIntervalTimespanFromHmdHz(hmdHz);
-                                frameTimeout = (uint)Math.Ceiling(intervalTimeSpan.TotalMilliseconds);
+                                frameTimeout = (uint)Math.Ceiling(intervalTimeSpan.TotalMilliseconds + 1);
 
                                 // Registration of listener for change of value
                                 Event.Register(EVREventType.VREvent_PropertyChanged, (in vrEvent) =>
@@ -252,7 +257,7 @@ public partial class EasyOpenVr
                                         ETrackedDeviceProperty.Prop_DisplayFrequency_Float
                                     ));
                                     intervalTimeSpan = GetIntervalTimespanFromHmdHz(hmdHz);
-                                    frameTimeout = (uint)Math.Ceiling(intervalTimeSpan.TotalMilliseconds);
+                                    frameTimeout = (uint)Math.Ceiling(intervalTimeSpan.TotalMilliseconds + 1);
                                 });
                                 break;
                             }
@@ -319,7 +324,7 @@ public partial class EasyOpenVr
                         }
                         else
                         {
-                            OnPumpCycle(stopwatch.Elapsed.TotalSeconds);
+                            OnPumpCycleIn(stopwatch.Elapsed.TotalSeconds);
                             stopwatch.Restart();
 
                             Event.LoadAllNew(); // This loads things like the quit event that will trigger the below.
@@ -334,6 +339,8 @@ public partial class EasyOpenVr
                             {
                                 Input.UpdateActionStates([.. Data.InputSourceHandleToInputSource.Keys], 0);
                             }
+
+                            OnPumpCycleOut(stopwatch.Elapsed.TotalSeconds);
 
                             if (waitForFrame)
                             {
