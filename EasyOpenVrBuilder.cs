@@ -1,3 +1,4 @@
+using System.Threading;
 using EasyOpenVR.Data.Manifest;
 using Software.Boll.EasyUtils;
 using Valve.VR;
@@ -13,18 +14,20 @@ public class EasyOpenVrBuilder
 
     /**
      * Build an instance but do not initialize it.
+     * Run it to start the inside worker and return a task.
      */
-    private EasyOpenVr Build()
+    public EasyOpenVr Build(CancellationToken cancellationToken)
     {
+        _initParams.CancellationToken = cancellationToken;
         return new EasyOpenVr(_initParams);
     }
 
     /**
-     * Build an instance and immediately initialize it.
+     * Build an instance and immediately initialize it, will not return a task.
      */
-    public EasyOpenVr BuildAndInit()
+    public EasyOpenVr BuildAndRun(CancellationToken cancellationToken)
     {
-        var vr = Build();
+        var vr = Build(cancellationToken);
         vr.InitWorkerThread();
         return vr;
     }

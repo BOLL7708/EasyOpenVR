@@ -23,6 +23,7 @@ public partial class EasyOpenVr
     public DataStore Data { get; }
 
     public record struct EasyOpenVrInitParams(
+        CancellationToken CancellationToken,
         EVRApplicationType ApplicationType,
         string? VrAppManifestPath,
         string? ActionManifestPath,
@@ -49,13 +50,15 @@ public partial class EasyOpenVr
         FailedToConnectToSteamVr,
         InitializingPump,
         RunningPump,
-        ReadyToShutdown
+        QuitWasCalled,
+        WorkerLoopTerminated
     }
 
     public enum EResultType
     {
         None,
-        ULong
+        ULong,
+        Boolean
     }
 
     public record struct EasyOpenVrResult(
@@ -75,6 +78,7 @@ public partial class EasyOpenVr
         public string ResultDescription { get; set; } = "";
         public EResultType ResultType { get; set; } = EResultType.None;
         public ulong ResultULong { get; set; } = 0;
+        public bool ResultBoolean { get; set; } = false;
     }
 
 
@@ -147,7 +151,11 @@ public partial class EasyOpenVr
 
     private uint _initState;
 
-    private bool Init()
+    /// <summary>
+    /// Will try to connect to SteamVR.
+    /// </summary>
+    /// <returns>Result with a boolean value representing connection status.</returns>
+    private EasyOpenVrResult Init()
     {
         OnState(EState.Idle);
         var error = EVRInitError.Unknown;
@@ -163,8 +171,11 @@ public partial class EasyOpenVr
 
         var connected = error == EVRInitError.None && _initState > 0;
         if (_initState != oldState) OnState(connected ? EState.ConnectedToSteamVr : EState.FailedToConnectToSteamVr);
-        DebugLog(error);
-        return connected;
+        var result = DebugLog(error);
+        result.ResultDescription = "Connected";
+        result.ResultType = EResultType.Boolean;
+        result.ResultBoolean = connected;
+        return result;
     }
 
     public bool IsInitialized()
@@ -177,16 +188,37 @@ public partial class EasyOpenVr
     #region Worker
 
     private Thread? _workerThread;
-    private bool _hasAcknowledgedShutdown = false;
 
+    /// <summary>
+    /// This is executed by the EasyOpenVrBuilder if it is used to initialize EasyOpenVr.
+    /// </summary>
     internal void InitWorkerThread()
     {
         Task.Delay(1000).Wait(); // Allow the API connection to complete 
-        _workerThread = new Thread(Worker);
+        _workerThread = new Thread(Worker) { IsBackground = true };
         if (!_workerThread.IsAlive) _workerThread.Start();
     }
 
-    private readonly CancellationTokenSource _cts = new();
+    /// <summary>
+    /// This is used to initialize EasyOpenVr while also getting a Task to await.
+    /// </summary>
+    public Task Run()
+    {
+        var tcs = new TaskCompletionSource();
+        _workerThread = new Thread(() =>
+        {
+            try
+            {
+                Worker();
+                tcs.SetResult();
+            }
+            catch (OperationCanceledException) { tcs.SetCanceled();}
+            catch (Exception ex) { tcs.SetException(ex); }
+        }) { IsBackground = true };
+        if (!_workerThread.IsAlive) _workerThread.Start();
+
+        return tcs.Task;
+    }
 
     private void Worker()
     {
@@ -194,12 +226,10 @@ public partial class EasyOpenVr
         //  Alright, the concept here. Instead of manually keeping track of indices, new devices, events, let us keep that
         //  inside the library. Make the event pump MANDATORY even if at a low Hz, then have live lists of events and
         //  transforms and indices that are continuously updated, compared to OpenVR2WS where we have a bunch of lists.
-
-        Thread.CurrentThread.IsBackground = true;
-        var token = _cts.Token;
+        
+        var cancellationToken = _initParams.CancellationToken;
         var hmdHz = 0;
         var firstInitComplete = false;
-        var beginShutdown = false;
         var pumpEnabled = true;
         var waitForFrame = _initParams.PumpInterval == EPumpInterval.HmdHz;
         uint frameTimeout = 1000;
@@ -208,7 +238,7 @@ public partial class EasyOpenVr
 
         try
         {
-            while (!token.IsCancellationRequested)
+            while (!cancellationToken.IsCancellationRequested)
             {
                 if (_initState > 0)
                 {
@@ -230,7 +260,11 @@ public partial class EasyOpenVr
                             Input.LoadActionManifest(_initParams.ActionManifestPath);
                         }
 
-                        Event.Register(EVREventType.VREvent_Quit, (in _) => { beginShutdown = true; }
+                        Event.Register(EVREventType.VREvent_Quit, (in _) =>
+                            {
+                                System.AcknowledgeShutdown(); // Will extend the timeout before the application is force terminated by SteamVR shutting down.
+                                OnState(EState.QuitWasCalled);
+                            }
                         );
 
                         switch (_initParams.PumpInterval)
@@ -320,7 +354,8 @@ public partial class EasyOpenVr
 
                         if (!pumpEnabled)
                         {
-                            if (token.WaitHandle.WaitOne(intervalTimeSpan)) break;
+                            // Stand here until we are called upon to terminate
+                            if (cancellationToken.WaitHandle.WaitOne(intervalTimeSpan)) break;
                         }
                         else
                         {
@@ -328,7 +363,7 @@ public partial class EasyOpenVr
                             stopwatch.Restart();
 
                             Event.LoadAllNew(); // This loads things like the quit event that will trigger the below.
-                            if (beginShutdown || token.IsCancellationRequested) break; // before any other OpenVR call
+                            if (cancellationToken.IsCancellationRequested) break; // before any other OpenVR call
 
                             Overlay.LoadAllNewEvents();
                             // TODO: Update overlay animations
@@ -352,7 +387,7 @@ public partial class EasyOpenVr
                             {
                                 // Else we simply wait to match the defined interval.
                                 var sleep = intervalTimeSpan - stopwatch.Elapsed;
-                                if (sleep.Ticks > 0) token.WaitHandle.WaitOne(sleep);
+                                if (sleep.Ticks > 0) cancellationToken.WaitHandle.WaitOne(sleep);
                             }
                         }
 
@@ -364,17 +399,11 @@ public partial class EasyOpenVr
                     #region IDLE
 
                     // Idle while we attempt to init
-                    if (token.WaitHandle.WaitOne(1000)) break;
+                    if (cancellationToken.WaitHandle.WaitOne(1000)) break;
                     Init();
 
                     #endregion
                 }
-            }
-
-            if (beginShutdown && !_hasAcknowledgedShutdown)
-            {
-                System.AcknowledgeShutdown(); // AcknowledgeQuit_Exiting
-                _hasAcknowledgedShutdown = true;
             }
         }
         finally
@@ -385,18 +414,21 @@ public partial class EasyOpenVr
                 _initState = 0;
             }
 
-            OnState(EState.ReadyToShutdown);
+            OnState(EState.WorkerLoopTerminated);
         }
     }
 
+    /// <summary>
+    /// Call this when everything depending on SteamVR has been wound down after OnState has reported QuitCalled, this will disconnect the runtime.
+    /// </summary>
     public void Shutdown()
     {
-        _cts.Cancel();
         if (_workerThread is { IsAlive: true } && Thread.CurrentThread != _workerThread)
         {
             // Blocks the current thread preventing the final OnState call to happen before the worker has died.
             _workerThread.Join();
         }
+        System.Shutdown();
     }
 
     private static TimeSpan GetIntervalTimespanFromHmdHz(int hmdHz)
